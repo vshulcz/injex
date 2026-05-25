@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Why Injex — tiny typed dependency injection for Python services</title>
+    <meta name="description" content="Why Injex exists: a tiny typed DI container for Python services, CLIs, workers, tests, and clean architecture code." />
+    <link rel="canonical" href="https://vshulcz.github.io/injex/docs/why.html" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="docs-page">
+    <header class="nav"><a class="brand" href="../">Injex</a><nav><a href="./">Docs</a><a href="./comparison.html">Compare</a><a href="https://github.com/vshulcz/injex">GitHub</a></nav></header>
+    <main class="docs-shell">
+      <aside class="docs-sidebar"><a href="./">Overview</a><a href="./getting-started.html">Getting started</a><a href="./validation.html">Validation</a><a href="./comparison.html">Comparison</a><a class="active" href="./why.html">Why Injex</a><a href="./usage.html">Usage scenarios</a><a href="./api.html">API reference</a></aside>
+      <article class="docs-content">
+        <p class="eyebrow">Why Injex</p>
+        <h1>A small container for the boring 80%.</h1>
+        <p>Python does not require a dependency injection container. Many small programs are better with plain functions and manual wiring.</p>
+        <p>Injex is for the next step: applications where manual wiring starts leaking into multiple entrypoints, tests need clean replacement of external dependencies, and startup should fail early when the graph is incomplete.</p>
+        <h2>The niche</h2>
+        <ul><li>No runtime dependencies.</li><li>No provider DSL.</li><li>No required decorators for constructor injection.</li><li>No framework lock-in.</li><li>Normal Python type hints as the wiring contract.</li></ul>
+        <h2>Design principle</h2>
+        <p class="docs-note">Injex should stay boring in production: explicit registrations, predictable lifetime rules, readable errors, and no hidden runtime dependencies.</p>
+      </article>
+    </main>
+  </body>
+</html>

@@ -7,6 +7,16 @@ and this project uses semantic versioning.
 
 ## [Unreleased]
 
+### Added
+
+- SEO-focused documentation site pages with canonical URLs, sitemap, robots.txt,
+  Open Graph metadata, and structured data.
+
+### Changed
+
+- Public website now links to local documentation pages instead of only GitHub
+  Markdown files.
+
 ## [1.2.1] - 2026-05-25
 
 ### Added

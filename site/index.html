@@ -8,6 +8,11 @@
       name="description"
       content="Tiny typed dependency injection for Python apps that want explicit wiring without a framework-sized container."
     />
+    <meta
+      name="keywords"
+      content="python dependency injection, python di container, typed dependency injection, clean architecture python, python service wiring"
+    />
+    <link rel="canonical" href="https://vshulcz.github.io/injex/" />
     <meta property="og:title" content="Injex — tiny typed DI for Python" />
     <meta
       property="og:description"
@@ -15,7 +20,13 @@
     />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://vshulcz.github.io/injex/" />
+    <meta property="og:site_name" content="Injex" />
     <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Injex — tiny typed DI for Python" />
+    <meta
+      name="twitter:description"
+      content="Explicit wiring, scoped lifetimes, test overrides, and graph validation for Python services, CLIs, and workers."
+    />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -24,7 +35,9 @@
         "codeRepository": "https://github.com/vshulcz/injex",
         "programmingLanguage": "Python",
         "description": "Tiny typed dependency injection for Python apps that want explicit wiring without a framework-sized container.",
-        "license": "https://github.com/vshulcz/injex/blob/main/LICENSE"
+        "license": "https://github.com/vshulcz/injex/blob/main/LICENSE",
+        "url": "https://vshulcz.github.io/injex/",
+        "downloadUrl": "https://pypi.org/project/injex/"
       }
     </script>
     <link rel="stylesheet" href="./styles.css" />
@@ -36,6 +49,7 @@
         <a href="#why">Why</a>
         <a href="#fit">Use cases</a>
         <a href="#code">Example</a>
+        <a href="./docs/">Docs</a>
         <a href="https://github.com/vshulcz/injex">GitHub</a>
       </nav>
     </header>
@@ -53,7 +67,7 @@
           <div class="actions">
             <a class="primary" href="https://github.com/vshulcz/injex">View on GitHub</a>
             <a href="https://pypi.org/project/injex/">PyPI package</a>
-            <a href="https://github.com/vshulcz/injex/blob/main/docs/index.md">Docs</a>
+            <a href="./docs/">Read docs</a>
           </div>
         </div>
 
@@ -138,9 +152,9 @@ service = container.resolve(Service)</code></pre>
           creation.
         </p>
         <div class="actions">
-          <a href="https://github.com/vshulcz/injex/blob/main/docs/why-injex.md">Read why Injex</a>
-          <a href="https://github.com/vshulcz/injex/blob/main/docs/comparison.md">Comparison guide</a>
-          <a href="https://github.com/vshulcz/injex/blob/main/docs/usage-scenarios.md">Usage scenarios</a>
+          <a href="./docs/why.html">Read why Injex</a>
+          <a href="./docs/comparison.html">Comparison guide</a>
+          <a href="./docs/usage.html">Usage scenarios</a>
         </div>
       </section>
 
@@ -160,6 +174,28 @@ service = container.resolve(Service)</code></pre>
             <li>your framework dependency system covers every entrypoint;</li>
             <li>you need a large provider/configuration DSL.</li>
           </ul>
+        </div>
+      </section>
+
+      <section class="section docs-preview">
+        <p class="eyebrow">Documentation</p>
+        <h2>Readable docs for real Python application wiring.</h2>
+        <div class="docs-grid">
+          <a href="./docs/getting-started.html">
+            <span>01</span>
+            <strong>Getting started</strong>
+            <small>Register services, validate the graph, resolve use cases.</small>
+          </a>
+          <a href="./docs/validation.html">
+            <span>02</span>
+            <strong>Graph validation</strong>
+            <small>Catch missing registrations and cycles before startup.</small>
+          </a>
+          <a href="./docs/comparison.html">
+            <span>03</span>
+            <strong>Comparison guide</strong>
+            <small>Manual wiring, framework DI, Injex, or larger containers.</small>
+          </a>
         </div>
       </section>
     </main>

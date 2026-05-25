@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Injex documentation — Python dependency injection container</title>
+    <meta name="description" content="Documentation for Injex, a tiny typed dependency injection container for Python services, CLIs, workers, and tests." />
+    <link rel="canonical" href="https://vshulcz.github.io/injex/docs/" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="docs-page">
+    <header class="nav"><a class="brand" href="../">Injex</a><nav><a href="../">Home</a><a href="./getting-started.html">Start</a><a href="./comparison.html">Compare</a><a href="https://github.com/vshulcz/injex">GitHub</a></nav></header>
+    <main class="docs-shell">
+      <aside class="docs-sidebar">
+        <a class="active" href="./">Overview</a>
+        <a href="./getting-started.html">Getting started</a>
+        <a href="./validation.html">Validation</a>
+        <a href="./comparison.html">Comparison</a>
+        <a href="./why.html">Why Injex</a>
+        <a href="./usage.html">Usage scenarios</a>
+        <a href="./api.html">API reference</a>
+      </aside>
+      <article class="docs-content">
+        <p class="eyebrow">Documentation</p>
+        <h1>Typed dependency injection for small Python apps.</h1>
+        <p class="lead">Injex helps wire services, CLIs, workers, and tests with normal Python type hints, explicit registrations, scoped lifetimes, overrides, and startup validation.</p>
+        <div class="doc-cards">
+          <a href="./getting-started.html"><strong>Getting started</strong><br /><span>Install, register, validate, resolve.</span></a>
+          <a href="./validation.html"><strong>Validation</strong><br /><span>Find wiring errors without constructing services.</span></a>
+          <a href="./comparison.html"><strong>Comparison guide</strong><br /><span>Manual wiring, framework DI, or Injex.</span></a>
+          <a href="./api.html"><strong>API reference</strong><br /><span>Container methods, scopes, and exceptions.</span></a>
+        </div>
+        <h2>Install</h2>
+        <pre><code>pip install injex</code></pre>
+        <h2>Best fit</h2>
+        <ul>
+          <li>Python service layers reused by API handlers, CLIs, workers, and tests.</li>
+          <li>Clean architecture code that should not depend on a web framework.</li>
+          <li>Tests that need temporary dependency overrides.</li>
+          <li>Startup checks that should validate the dependency graph early.</li>
+        </ul>
+      </article>
+    </main>
+  </body>
+</html>

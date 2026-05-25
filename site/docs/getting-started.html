@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Getting started with Injex — Python DI container</title>
+    <meta name="description" content="Install Injex, register Python services, validate the dependency graph, and resolve typed dependencies." />
+    <link rel="canonical" href="https://vshulcz.github.io/injex/docs/getting-started.html" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="docs-page">
+    <header class="nav"><a class="brand" href="../">Injex</a><nav><a href="./">Docs</a><a href="./comparison.html">Compare</a><a href="https://github.com/vshulcz/injex">GitHub</a></nav></header>
+    <main class="docs-shell">
+      <aside class="docs-sidebar"><a href="./">Overview</a><a class="active" href="./getting-started.html">Getting started</a><a href="./validation.html">Validation</a><a href="./comparison.html">Comparison</a><a href="./why.html">Why Injex</a><a href="./usage.html">Usage scenarios</a><a href="./api.html">API reference</a></aside>
+      <article class="docs-content">
+        <p class="eyebrow">Getting started</p>
+        <h1>Register services once. Resolve typed dependencies.</h1>
+        <p>Injex uses regular Python type hints. Application classes do not need to inherit from container-specific base classes or use decorators for constructor injection.</p>
+        <h2>Install</h2>
+        <pre><code>pip install injex</code></pre>
+        <h2>Minimal example</h2>
+        <pre><code>from injex import Container
+
+class Repository:
+    def save(self, email: str) -> int:
+        return 42
+
+class RegisterUser:
+    def __init__(self, repository: Repository):
+        self.repository = repository
+
+    def execute(self, email: str) -> int:
+        return self.repository.save(email)
+
+container = Container()
+container.add_singleton(Repository)
+container.add_transient(RegisterUser)
+container.assert_valid()
+
+use_case = container.resolve(RegisterUser)</code></pre>
+        <h2>Lifetimes</h2>
+        <ul>
+          <li><code>add_singleton()</code>: one instance reused for app lifetime.</li>
+          <li><code>add_transient()</code>: new instance on each resolve.</li>
+          <li><code>add_scoped()</code>: one instance per scope, useful for requests or jobs.</li>
+        </ul>
+        <p class="docs-note">Keep container calls at the composition root. Your application services should depend on normal Python types.</p>
+      </article>
+    </main>
+  </body>
+</html>
