@@ -19,6 +19,7 @@ and this project uses semantic versioning.
 
 - CI now uses `astral-sh/setup-uv`, builds distributions, smoke-tests wheels,
   and avoids failing fork pull requests on Codecov token availability.
+- README and docs site now surface the public website more prominently.
 
 ## [1.2.0] - 2026-05-25
 
