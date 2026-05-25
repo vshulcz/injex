@@ -187,6 +187,7 @@ explicit while still covering common application wiring needs.
 Thanks to the people improving Injex through issues, reviews, and pull requests:
 
 - [Muhammad Saqib Atif](https://github.com/msaqibatifj) — FastAPI example.
+- [oppnc](https://github.com/oppnc) — nested override regression tests.
 
 ## Contributing
 
