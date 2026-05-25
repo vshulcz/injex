@@ -1,8 +1,8 @@
 [project]
 name = "injex"
-version = "1.2.0"
+version = "1.2.1"
 authors = [{name = "vshulcz", email = "vshulcz@gmail.com"}]
-description = "Tiny zero-dependency dependency injection container for Python"
+description = "Tiny typed dependency injection for Python apps"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"

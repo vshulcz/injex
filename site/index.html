@@ -8,6 +8,25 @@
       name="description"
       content="Tiny typed dependency injection for Python apps that want explicit wiring without a framework-sized container."
     />
+    <meta property="og:title" content="Injex — tiny typed DI for Python" />
+    <meta
+      property="og:description"
+      content="Explicit wiring, scoped lifetimes, test overrides, and graph validation for Python services, CLIs, and workers."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://vshulcz.github.io/injex/" />
+    <meta name="twitter:card" content="summary" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareSourceCode",
+        "name": "Injex",
+        "codeRepository": "https://github.com/vshulcz/injex",
+        "programmingLanguage": "Python",
+        "description": "Tiny typed dependency injection for Python apps that want explicit wiring without a framework-sized container.",
+        "license": "https://github.com/vshulcz/injex/blob/main/LICENSE"
+      }
+    </script>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -120,7 +139,27 @@ service = container.resolve(Service)</code></pre>
         </p>
         <div class="actions">
           <a href="https://github.com/vshulcz/injex/blob/main/docs/why-injex.md">Read why Injex</a>
+          <a href="https://github.com/vshulcz/injex/blob/main/docs/comparison.md">Comparison guide</a>
           <a href="https://github.com/vshulcz/injex/blob/main/docs/usage-scenarios.md">Usage scenarios</a>
+        </div>
+      </section>
+
+      <section class="section decision">
+        <div>
+          <h3>Use Injex when</h3>
+          <ul>
+            <li>one service graph is reused by APIs, CLIs, workers, and tests;</li>
+            <li>test doubles should replace external services explicitly;</li>
+            <li>startup should validate wiring before real objects are built.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Skip it when</h3>
+          <ul>
+            <li>manual constructor calls are still clear enough;</li>
+            <li>your framework dependency system covers every entrypoint;</li>
+            <li>you need a large provider/configuration DSL.</li>
+          </ul>
         </div>
       </section>
     </main>

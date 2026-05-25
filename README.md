@@ -21,6 +21,19 @@ pip install injex
 
 Website: [vshulcz.github.io/injex](https://vshulcz.github.io/injex/)
 
+## Use Injex when
+
+- you have a service layer reused by an API, CLI, worker, and tests;
+- constructors already describe dependencies with type hints;
+- test doubles should replace external services without changing production wiring;
+- startup should catch missing registrations before the first request or job.
+
+## Skip Injex when
+
+- a few manual constructor calls are still clear enough;
+- your framework dependency system already covers every entrypoint;
+- you need a large provider/configuration DSL.
+
 ## Why Injex?
 
 - **Zero dependencies**: pure Python, easy to vendor, audit, and run anywhere.
@@ -175,6 +188,7 @@ explicit while still covering common application wiring needs.
 - [Tutorial](./docs/tutorial.md)
 - [Validation guide](./docs/validation.md)
 - [Why Injex](./docs/why-injex.md)
+- [Comparison guide](./docs/comparison.md)
 - [Usage scenarios](./docs/usage-scenarios.md)
 - [API reference](./docs/api.md)
 - [Clean architecture example](./examples/clean_architecture.py)

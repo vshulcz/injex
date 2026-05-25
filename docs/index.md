@@ -9,6 +9,8 @@ framework-sized dependency injection container.
   common patterns.
 - [Why Injex](./why-injex.md): positioning, trade-offs, and comparison with
   common alternatives.
+- [Comparison guide](./comparison.md): when to choose Injex, manual wiring,
+  framework dependencies, or a larger DI container.
 - [Usage scenarios](./usage-scenarios.md): where Injex fits in services, CLIs,
   workers, and tests.
 - [Container validation](./validation.md): check wiring before startup without

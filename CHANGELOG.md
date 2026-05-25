@@ -7,6 +7,8 @@ and this project uses semantic versioning.
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-05-25
+
 ### Added
 
 - Release workflow for tagged builds with wheel smoke tests and release assets.
@@ -14,12 +16,15 @@ and this project uses semantic versioning.
 - CODEOWNERS and issue template chooser configuration.
 - GitHub Pages-ready docs site.
 - Positioning guide, usage scenarios, and launch copy for external distribution.
+- Comparison guide for choosing between manual wiring, framework dependencies,
+  Injex, and larger DI containers.
 
 ### Changed
 
 - CI now uses `astral-sh/setup-uv`, builds distributions, smoke-tests wheels,
   and avoids failing fork pull requests on Codecov token availability.
 - README and docs site now surface the public website more prominently.
+- Package description now emphasizes typed dependency injection for Python apps.
 
 ## [1.2.0] - 2026-05-25
 

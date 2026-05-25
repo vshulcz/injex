@@ -267,8 +267,29 @@ pre code {
 
 .comparison {
   margin-top: 28px;
-  margin-bottom: 72px;
   padding: clamp(28px, 5vw, 52px);
+}
+
+.decision {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 28px;
+  margin-bottom: 72px;
+}
+
+.decision div {
+  padding: 26px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: rgba(16, 22, 34, 0.78);
+}
+
+.decision ul {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--muted);
+  line-height: 1.8;
 }
 
 @media (max-width: 880px) {
@@ -284,7 +305,8 @@ pre code {
 
   .hero,
   .split,
-  .code-section {
+  .code-section,
+  .decision {
     grid-template-columns: 1fr;
   }
 
