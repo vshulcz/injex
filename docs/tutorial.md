@@ -4,14 +4,14 @@
 
 1. [Core Concepts](#core-concepts)
 - [Service Registration](#service-registration)
-    - [Sigleton services](#singleton-services)
+    - [Singleton services](#singleton-services)
     - [Transient services](#transient-services)
     - [Scoped services](#scoped-services)
 - [Factory Registration](#factory-registration)
     - [Singleton Factories](#singleton-factories)
     - [Transient Factories](#transient-factories)
     - [Scoped Factories](#scoped-factories)
-- [Instance Registration](#instances-registration)
+- [Instance Registration](#instance-registration)
 - [Resolving Dependencies](#resolving-dependencies)
     - [Resolving Single Instances](#resolving-single-instances)
     - [Resolving Multiple Instances](#resolving-multiple-instances)
@@ -19,6 +19,7 @@
 - [Named Registrations](#named-registrations)
 - [Optional Dependencies](#optional-dependencies)
 - [Test Overrides](#test-overrides)
+- [Container Validation](#container-validation)
 3. [Advanced Topics](#advanced-topics)
 - [Scopes and Scoped Services](#scopes-and-scoped-services)
 - [Cyclic Dependencies](#cyclic-dependencies)
@@ -26,7 +27,7 @@
 4. [Real-World Examples](#real-world-examples)
 - [Building a Mediator with Pipeline Behaviors](#building-a-mediator-with-pipeline-behaviors)
 - [Creating an API Service with Database Integration](#creating-an-api-service-with-database-integration)
-5. [Best Practices](#best-practises)
+5. [Best Practices](#best-practices)
 6. [Conclusion](#conclusion)
 
 ## Core Concepts
@@ -274,6 +275,43 @@ assert fake_payments.charges == [1999]
 The original registration is restored when the context exits. Existing scoped
 instances are not rewritten, so create scopes inside the override block when the
 test uses scoped services.
+
+### Container Validation
+
+Use `validate()` or `assert_valid()` to catch wiring errors before the app starts.
+Validation inspects constructors, factories, and injected properties without
+creating service instances.
+
+```python
+from injex import Container
+
+
+class Settings:
+    pass
+
+
+class ApiClient:
+    def __init__(self, settings: Settings):
+        self.settings = settings
+
+
+container = Container()
+container.add_singleton(Settings)
+container.add_transient(ApiClient)
+
+container.assert_valid()
+```
+
+When you want to format errors yourself, use `validate()`:
+
+```python
+for error in container.validate():
+    print(error)
+```
+
+Validation reports missing type annotations, missing required registrations, and
+dependency cycles. Optional dependencies and dependencies with default values are
+accepted when no registration exists.
 
 ## Advanced Topics
 

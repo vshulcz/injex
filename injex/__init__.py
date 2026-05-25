@@ -1,5 +1,6 @@
 import inspect
 import types
+from dataclasses import dataclass
 from typing import (
     Any,
     Callable,
@@ -14,6 +15,21 @@ from typing import (
     get_origin,
     get_type_hints,
 )
+
+
+__all__ = [
+    "Container",
+    "ContainerValidationException",
+    "CyclicDependencyException",
+    "DIException",
+    "InvalidLifestyleException",
+    "LifeStyle",
+    "MissingTypeAnnotationException",
+    "Scope",
+    "ServiceNotRegisteredException",
+    "ValidationError",
+    "inject",
+]
 
 
 class DIException(Exception):
@@ -42,8 +58,36 @@ class MissingTypeAnnotationException(DIException):
 class InvalidLifestyleException(DIException):
     def __init__(self, lifestyle: str):
         super().__init__(
-            f"Invalid lifestyle '{lifestyle}'. Valid options are 'transient' or 'singleton'."
+            f"Invalid lifestyle '{lifestyle}'. Valid options are 'transient', 'singleton', or 'scoped'."
         )
+
+
+@dataclass(frozen=True)
+class ValidationError:
+    service: Union[Type, str]
+    name: Optional[str]
+    message: str
+
+    def __str__(self) -> str:
+        service = _describe_service(self.service)
+        if self.name is not None:
+            service += f" named '{self.name}'"
+        return f"{service}: {self.message}"
+
+
+class ContainerValidationException(DIException):
+    def __init__(self, errors: List[ValidationError]):
+        self.errors = errors
+        details = "\n".join(f"- {error}" for error in errors)
+        super().__init__(
+            f"Container validation failed with {len(errors)} error(s):\n{details}"
+        )
+
+
+def _describe_service(service: Union[Type, str]) -> str:
+    if isinstance(service, str):
+        return service
+    return getattr(service, "__name__", str(service))
 
 
 def inject(func: Callable) -> Callable:
@@ -273,6 +317,20 @@ class Container:
     def create_scope(self) -> Scope:
         return Scope(self)
 
+    def validate(self) -> List[ValidationError]:
+        """Validate registered dependency graphs without creating service instances."""
+        errors: List[ValidationError] = []
+        for key, registrations in self._registrations.items():
+            for registration in registrations:
+                errors.extend(self._validate_registration(key, registration, []))
+        return errors
+
+    def assert_valid(self) -> None:
+        """Raise ContainerValidationException when any registration is invalid."""
+        errors = self.validate()
+        if errors:
+            raise ContainerValidationException(errors)
+
     def _resolve_in_scope(
         self, interface: Union[Type, str], scope: Scope, name: Optional[str] = None
     ) -> List[Any]:
@@ -283,6 +341,188 @@ class Container:
             instance = self._get_instance_from_registration(registration, scope, key)
             instances.append(instance)
         return instances
+
+    def _validate_registration(
+        self,
+        key: Tuple[Union[Type, str], Optional[str]],
+        registration: Registration,
+        path: List[Tuple[Union[Type, str], Optional[str]]],
+    ) -> List[ValidationError]:
+        if registration.kind == RegistrationType.INSTANCE:
+            return []
+
+        if key in path:
+            cycle = path + [key]
+            return [
+                ValidationError(
+                    key[0],
+                    key[1],
+                    "Cyclic dependency detected: "
+                    + " -> ".join(_describe_service(item[0]) for item in cycle)
+                    + ".",
+                )
+            ]
+
+        if registration.kind == RegistrationType.SERVICE:
+            if registration.implementation is None:
+                return [
+                    ValidationError(
+                        key[0], key[1], "Service registration has no implementation."
+                    )
+                ]
+            return self._validate_class(registration.implementation, key, path + [key])
+
+        if registration.kind == RegistrationType.FACTORY:
+            if registration.factory is None:
+                return [
+                    ValidationError(key[0], key[1], "Factory registration is empty.")
+                ]
+            return self._validate_callable(registration.factory, key, path + [key])
+
+        return [ValidationError(key[0], key[1], "Registration kind is not supported.")]
+
+    def _validate_class(
+        self,
+        cls: Type,
+        source_key: Tuple[Union[Type, str], Optional[str]],
+        path: List[Tuple[Union[Type, str], Optional[str]]],
+    ) -> List[ValidationError]:
+        errors: List[ValidationError] = []
+        constructor = cls.__init__
+        if constructor is not object.__init__:
+            errors.extend(
+                self._validate_callable(constructor, source_key, path, skip_self=True)
+            )
+
+        for name in dir(cls):
+            attr = getattr(cls, name)
+            if callable(attr) and is_injectable(attr):
+                try:
+                    type_hints = get_type_hints(attr)
+                except Exception as exc:
+                    errors.append(
+                        ValidationError(
+                            source_key[0],
+                            source_key[1],
+                            f"Cannot read type hints for injected property '{name}': {exc}",
+                        )
+                    )
+                    continue
+                dependency_type = type_hints.get("return")
+                if dependency_type is None:
+                    errors.append(
+                        ValidationError(
+                            source_key[0],
+                            source_key[1],
+                            f"Injected property '{name}' has no return type annotation.",
+                        )
+                    )
+                    continue
+                errors.extend(
+                    self._validate_dependency(dependency_type, source_key, path, name)
+                )
+        return errors
+
+    def _validate_callable(
+        self,
+        func: Callable[..., Any],
+        source_key: Tuple[Union[Type, str], Optional[str]],
+        path: List[Tuple[Union[Type, str], Optional[str]]],
+        skip_self: bool = False,
+    ) -> List[ValidationError]:
+        errors: List[ValidationError] = []
+        try:
+            parameters = inspect.signature(func).parameters
+        except Exception as exc:
+            return [
+                ValidationError(
+                    source_key[0], source_key[1], f"Cannot inspect dependencies: {exc}"
+                )
+            ]
+        try:
+            type_hints = get_type_hints(func)
+        except Exception:
+            type_hints = {}
+
+        for name, param in parameters.items():
+            if skip_self and name == "self":
+                continue
+            if param.annotation == inspect.Parameter.empty and name not in type_hints:
+                if name == "container":
+                    continue
+                errors.append(
+                    ValidationError(
+                        source_key[0],
+                        source_key[1],
+                        f"Missing type annotation for dependency '{name}'.",
+                    )
+                )
+                continue
+            dependency_type = type_hints.get(name, param.annotation)
+            if isinstance(param.annotation, str):
+                raw_dependency_key = self._get_validation_key(param.annotation)
+                if raw_dependency_key in self._registrations:
+                    dependency_type = param.annotation
+            errors.extend(
+                self._validate_dependency(
+                    dependency_type,
+                    source_key,
+                    path,
+                    name,
+                    has_default=param.default != inspect.Parameter.empty,
+                )
+            )
+        return errors
+
+    def _validate_dependency(
+        self,
+        dependency_type: Any,
+        source_key: Tuple[Union[Type, str], Optional[str]],
+        path: List[Tuple[Union[Type, str], Optional[str]]],
+        dependency_name: str,
+        has_default: bool = False,
+    ) -> List[ValidationError]:
+        is_optional = False
+        origin = get_origin(dependency_type)
+        if origin in (Union, types.UnionType):
+            args = get_args(dependency_type)
+            if type(None) in args:
+                is_optional = True
+                non_none_args = [arg for arg in args if arg is not type(None)]
+                dependency_type = non_none_args[0] if non_none_args else Any
+
+        dependency_key = self._get_validation_key(dependency_type)
+        registrations = self._registrations.get(dependency_key, [])
+        if not registrations:
+            if is_optional or has_default:
+                return []
+            return [
+                ValidationError(
+                    source_key[0],
+                    source_key[1],
+                    f"Dependency '{dependency_name}' is not registered: "
+                    f"{_describe_service(dependency_type)}.",
+                )
+            ]
+
+        errors: List[ValidationError] = []
+        for registration in registrations:
+            errors.extend(
+                self._validate_registration(dependency_key, registration, path)
+            )
+        return errors
+
+    def _get_validation_key(
+        self, dependency_type: Any
+    ) -> Tuple[Union[Type, str], None]:
+        if isinstance(dependency_type, str):
+            for registered_service, registered_name in self._registrations:
+                if registered_name is None and (
+                    registered_service == dependency_type
+                    or getattr(registered_service, "__name__", None) == dependency_type
+                ):
+                    return (registered_service, None)
+        return (dependency_type, None)
 
     def _get_instance_from_registration(
         self,

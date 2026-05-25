@@ -2,14 +2,17 @@ from typing import Optional
 import unittest
 from abc import ABC, abstractmethod
 
+import injex
 from injex import (
     Container,
+    ContainerValidationException,
     CyclicDependencyException,
     DIException,
     InvalidLifestyleException,
     LifeStyle,
     MissingTypeAnnotationException,
     ServiceNotRegisteredException,
+    ValidationError,
     inject,
 )
 
@@ -957,6 +960,115 @@ class TestContainer(unittest.TestCase):
             self.container.override(Service, Service, instance=Service())
 
         self.assertIn("Provide only one override target", str(context.exception))
+
+    def test_validate_returns_empty_list_for_valid_graph(self):
+        class Repository: ...
+
+        class Service:
+            def __init__(self, repository: Repository):
+                self.repository = repository
+
+        self.container.add_singleton(Repository)
+        self.container.add_transient(Service)
+
+        self.assertEqual(self.container.validate(), [])
+
+    def test_validate_reports_missing_constructor_dependency(self):
+        class Repository: ...
+
+        class Service:
+            def __init__(self, repository: Repository):
+                self.repository = repository
+
+        self.container.add_transient(Service)
+
+        errors = self.container.validate()
+
+        self.assertEqual(len(errors), 1)
+        self.assertIsInstance(errors[0], ValidationError)
+        self.assertEqual(errors[0].service, Service)
+        self.assertIn("Dependency 'repository' is not registered", errors[0].message)
+
+    def test_validate_allows_optional_or_default_dependency(self):
+        class Cache: ...
+
+        class Service:
+            def __init__(self, cache: Optional[Cache] = None):
+                self.cache = cache
+
+        self.container.add_transient(Service)
+
+        self.assertEqual(self.container.validate(), [])
+
+    def test_validate_reports_factory_dependency_errors(self):
+        class Settings: ...
+
+        class Client: ...
+
+        def factory(settings: Settings) -> Client:
+            return Client()
+
+        self.container.add_transient_factory(Client, factory)
+
+        errors = self.container.validate()
+
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0].service, Client)
+        self.assertIn("Dependency 'settings' is not registered", errors[0].message)
+
+    def test_validate_detects_cycles_without_instantiating_services(self):
+        class ServiceA:
+            created = False
+
+            def __init__(self, service_b: "ServiceB"):
+                ServiceA.created = True
+                self.service_b = service_b
+
+        class ServiceB:
+            def __init__(self, service_a: ServiceA):
+                self.service_a = service_a
+
+        self.container.add_transient(ServiceA)
+        self.container.add_transient(ServiceB)
+
+        errors = self.container.validate()
+
+        self.assertFalse(ServiceA.created)
+        self.assertTrue(
+            any("Cyclic dependency detected" in error.message for error in errors)
+        )
+
+    def test_assert_valid_raises_container_validation_exception(self):
+        class Dependency: ...
+
+        class Service:
+            def __init__(self, dependency: Dependency):
+                self.dependency = dependency
+
+        self.container.add_transient(Service)
+
+        with self.assertRaises(ContainerValidationException) as context:
+            self.container.assert_valid()
+
+        self.assertEqual(len(context.exception.errors), 1)
+        self.assertIn("Container validation failed", str(context.exception))
+
+    def test_public_api_all_exports_core_symbols(self):
+        expected = {
+            "Container",
+            "ContainerValidationException",
+            "CyclicDependencyException",
+            "DIException",
+            "InvalidLifestyleException",
+            "LifeStyle",
+            "MissingTypeAnnotationException",
+            "Scope",
+            "ServiceNotRegisteredException",
+            "ValidationError",
+            "inject",
+        }
+
+        self.assertTrue(expected.issubset(set(injex.__all__)))
 
 
 if __name__ == "__main__":

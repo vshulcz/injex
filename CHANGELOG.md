@@ -7,6 +7,23 @@ and this project uses semantic versioning.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-05-25
+
+### Added
+
+- Dependency graph validation through `Container.validate()` and
+  `Container.assert_valid()`.
+- Public API export list for stable imports from `injex`.
+- PEP 561 typing marker for downstream type checkers.
+- SPDX license metadata for modern Python packaging.
+- API reference, validation guide, roadmap, security policy, and GitHub issue/PR
+  templates.
+
+### Fixed
+
+- Invalid lifestyle error message now includes scoped services.
+- Tutorial table of contents typos and anchors.
+
 ## [1.1.0] - 2026-05-25
 
 ### Added

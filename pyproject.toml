@@ -1,19 +1,20 @@
 [project]
 name = "injex"
-version = "1.1.0"
+version = "1.2.0"
 authors = [{name = "vshulcz", email = "vshulcz@gmail.com"}]
 description = "Tiny zero-dependency dependency injection container for Python"
 readme = "README.md"
+license = "MIT"
 requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Operating System :: OS Independent",
+    "Typing :: Typed",
 ]
 keywords = ["dependency-injection", "di", "container", "ioc", "clean-architecture", "testing"]
 dependencies = []
@@ -29,5 +30,9 @@ dev-dependencies = [
 [project.urls]
 "Homepage" = "https://github.com/vshulcz/injex"
 "Repository" = "https://github.com/vshulcz/injex"
-"Documentation" = "https://github.com/vshulcz/injex/blob/main/docs/tutorial.md"
+"Documentation" = "https://github.com/vshulcz/injex/blob/main/docs/index.md"
 "Issues" = "https://github.com/vshulcz/injex/issues"
+"Changelog" = "https://github.com/vshulcz/injex/blob/main/CHANGELOG.md"
+
+[tool.setuptools.package-data]
+injex = ["py.typed"]

@@ -26,6 +26,8 @@ pip install injex
 - **Named registrations**: register multiple implementations of the same type.
 - **Optional dependencies**: `Optional[T]` works without special configuration.
 - **Test overrides**: swap real services for fakes in a small, explicit scope.
+- **Container validation**: catch missing annotations, missing registrations, and
+  dependency cycles before your app starts.
 
 ## Quick start
 
@@ -59,9 +61,28 @@ container.add_singleton(UserRepository)
 container.add_singleton(EmailSender)
 container.add_transient(RegisterUser)
 
+container.assert_valid()
+
 use_case = container.resolve(RegisterUser)
 user_id = use_case.execute("ada@example.com")
 ```
+
+## Validate wiring before startup
+
+`validate()` checks the registered dependency graph without constructing your
+services. That makes it safe for startup checks and CI smoke tests.
+
+```python
+errors = container.validate()
+
+if errors:
+    for error in errors:
+        print(error)
+    raise SystemExit(1)
+```
+
+Use `assert_valid()` when you prefer a single exception with all validation
+errors.
 
 ## Testing with overrides
 
@@ -118,6 +139,7 @@ assert scope_a.resolve(RequestContext) is not scope_b.resolve(RequestContext)
 | Named registrations | ✅ | ✅ | ❌ | ✅ |
 | Property injection | ✅ | ❌ | ❌ | ❌ |
 | Temporary test overrides | ✅ | ✅ | ❌ | ✅ |
+| Graph validation without object creation | ✅ | ❌ | ❌ | ❌ |
 | Small API surface | ✅ | ❌ | ✅ | ✅ |
 
 This table is not a benchmark. It shows the niche: Injex aims to be small and
@@ -125,13 +147,31 @@ explicit while still covering common application wiring needs.
 
 ## Documentation and examples
 
+- [Docs index](./docs/index.md)
 - [Tutorial](./docs/tutorial.md)
+- [Validation guide](./docs/validation.md)
+- [API reference](./docs/api.md)
 - [Clean architecture example](./examples/clean_architecture.py)
 - [CLI application example](./examples/cli_app.py)
 - [Testing overrides example](./examples/testing.py)
 - [Scoped lifetime example](./examples/scoped.py)
 - [Factories example](./examples/factory.py)
 - [Named registrations example](./examples/named.py)
+
+## API at a glance
+
+| Method | Use when |
+| --- | --- |
+| `add_singleton(T, Impl)` | One instance should be reused for the app lifetime. |
+| `add_transient(T, Impl)` | A new instance should be created on every resolve. |
+| `add_scoped(T, Impl)` | One instance should be reused inside one scope. |
+| `add_*_factory(T, factory)` | Construction needs custom code. |
+| `add_instance(T, instance)` | You already have the object to use. |
+| `resolve(T)` | Resolve one service from the root container. |
+| `resolve_all(T)` | Resolve all unnamed implementations for a type. |
+| `create_scope()` | Start a request, job, or message lifetime. |
+| `override(T, ...)` | Temporarily replace a dependency in tests. |
+| `validate()` / `assert_valid()` | Check wiring before startup. |
 
 ## Common use cases
 
@@ -143,8 +183,9 @@ explicit while still covering common application wiring needs.
 
 ## Contributing
 
-Contributions are welcome. Good first changes include documentation examples,
-typing improvements, and small API refinements with tests.
+Contributions are welcome when they keep the API small, tested, and practical.
+Useful changes usually improve documentation, typing, examples, or narrow edge
+cases without adding runtime dependencies.
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for the local setup and contribution
 guidelines.

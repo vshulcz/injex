@@ -22,7 +22,7 @@ uv run pytest
 
 Use `uv run ruff format .` to format changed files.
 
-## Good first contributions
+## Contribution scope
 
 - Improve examples for common application patterns.
 - Add tests for edge cases around factories, scopes, and optional dependencies.
