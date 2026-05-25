@@ -182,6 +182,12 @@ explicit while still covering common application wiring needs.
 - Background workers and consumers with per-job or per-message scopes.
 - Unit tests that need explicit dependency replacement.
 
+## Contributors
+
+Thanks to the people improving Injex through issues, reviews, and pull requests:
+
+- [Muhammad Saqib Atif](https://github.com/msaqibatifj) — FastAPI example.
+
 ## Contributing
 
 Contributions are welcome when they keep the API small, tested, and practical.
