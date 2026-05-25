@@ -4,20 +4,52 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Getting started with Injex — Python DI container</title>
-    <meta name="description" content="Install Injex, register Python services, validate the dependency graph, and resolve typed dependencies." />
+    <meta
+      name="description"
+      content="Install Injex, register Python services, validate the dependency graph, and resolve typed dependencies."
+    />
     <link rel="canonical" href="https://vshulcz.github.io/injex/docs/getting-started.html" />
     <link rel="stylesheet" href="../styles.css" />
   </head>
   <body class="docs-page">
-    <header class="nav"><a class="brand" href="../">Injex</a><nav><a href="./">Docs</a><a href="./comparison.html">Compare</a><a href="https://github.com/vshulcz/injex">GitHub</a></nav></header>
-    <main class="docs-shell">
-      <aside class="docs-sidebar"><a href="./">Overview</a><a class="active" href="./getting-started.html">Getting started</a><a href="./validation.html">Validation</a><a href="./comparison.html">Comparison</a><a href="./why.html">Why Injex</a><a href="./usage.html">Usage scenarios</a><a href="./api.html">API reference</a></aside>
+    <a class="skip-link" href="#content">Skip to content</a>
+    <header class="nav">
+      <a class="brand" href="../">Injex</a>
+      <nav aria-label="Primary navigation">
+        <a href="../">Home</a>
+        <a class="active" href="./">Docs</a>
+        <a href="./comparison.html">Compare</a>
+        <a href="https://github.com/vshulcz/injex">GitHub</a>
+      </nav>
+    </header>
+    <main id="content" class="docs-shell">
+      <aside class="docs-sidebar" aria-label="Documentation navigation">
+        <p class="sidebar-title">Documentation</p>
+        <a href="./">Overview</a>
+        <a class="active" href="./getting-started.html">Getting started</a>
+        <a href="./validation.html">Validation</a>
+        <a href="./comparison.html">Comparison</a>
+        <a href="./why.html">Why Injex</a>
+        <a href="./usage.html">Usage scenarios</a>
+        <a href="./api.html">API reference</a>
+      </aside>
       <article class="docs-content">
         <p class="eyebrow">Getting started</p>
         <h1>Register services once. Resolve typed dependencies.</h1>
-        <p>Injex uses regular Python type hints. Application classes do not need to inherit from container-specific base classes or use decorators for constructor injection.</p>
+        <p class="lead">
+          Injex uses regular Python type hints. Application classes do not need
+          base classes, constructor decorators, or framework-specific dependency hooks.
+        </p>
+
+        <div class="steps">
+          <div class="step"><span>1</span><div><strong>Install</strong><p>Use the PyPI package in any Python 3.10+ project.</p></div></div>
+          <div class="step"><span>2</span><div><strong>Register</strong><p>Describe the service graph at the composition root.</p></div></div>
+          <div class="step"><span>3</span><div><strong>Validate</strong><p>Catch missing dependencies before startup code constructs real services.</p></div></div>
+        </div>
+
         <h2>Install</h2>
         <pre><code>pip install injex</code></pre>
+
         <h2>Minimal example</h2>
         <pre><code>from injex import Container
 
@@ -38,14 +70,30 @@ container.add_transient(RegisterUser)
 container.assert_valid()
 
 use_case = container.resolve(RegisterUser)</code></pre>
+
         <h2>Lifetimes</h2>
-        <ul>
-          <li><code>add_singleton()</code>: one instance reused for app lifetime.</li>
-          <li><code>add_transient()</code>: new instance on each resolve.</li>
-          <li><code>add_scoped()</code>: one instance per scope, useful for requests or jobs.</li>
-        </ul>
-        <p class="docs-note">Keep container calls at the composition root. Your application services should depend on normal Python types.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Method</th><th>Meaning</th><th>Common use</th></tr></thead>
+            <tbody>
+              <tr><td><code>add_singleton()</code></td><td>One instance reused for the app lifetime.</td><td>Settings, clients, repositories.</td></tr>
+              <tr><td><code>add_transient()</code></td><td>New instance on each resolve.</td><td>Use cases and commands.</td></tr>
+              <tr><td><code>add_scoped()</code></td><td>One instance per scope.</td><td>Request, job, or message state.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="docs-note">
+          Keep registration code close to application startup. Treat it as your
+          composition root, not as business logic.
+        </p>
+
+        <nav class="pager" aria-label="Next pages">
+          <a href="./"><small>Previous</small>Docs overview</a>
+          <a href="./validation.html"><small>Next</small>Validation</a>
+        </nav>
       </article>
     </main>
+    <footer class="site-footer"><span>Injex docs</span><span><a href="../">Home</a> · <a href="https://github.com/vshulcz/injex">GitHub</a></span></footer>
   </body>
 </html>

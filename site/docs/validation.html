@@ -4,38 +4,75 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Injex validation — check Python DI wiring before startup</title>
-    <meta name="description" content="Use Injex validate() and assert_valid() to catch missing Python dependency registrations and cycles before services are constructed." />
+    <meta
+      name="description"
+      content="Use Injex validate() and assert_valid() to catch missing Python dependency registrations and cycles before services are constructed."
+    />
     <link rel="canonical" href="https://vshulcz.github.io/injex/docs/validation.html" />
     <link rel="stylesheet" href="../styles.css" />
   </head>
   <body class="docs-page">
-    <header class="nav"><a class="brand" href="../">Injex</a><nav><a href="./">Docs</a><a href="./api.html">API</a><a href="https://github.com/vshulcz/injex">GitHub</a></nav></header>
-    <main class="docs-shell">
-      <aside class="docs-sidebar"><a href="./">Overview</a><a href="./getting-started.html">Getting started</a><a class="active" href="./validation.html">Validation</a><a href="./comparison.html">Comparison</a><a href="./why.html">Why Injex</a><a href="./usage.html">Usage scenarios</a><a href="./api.html">API reference</a></aside>
+    <a class="skip-link" href="#content">Skip to content</a>
+    <header class="nav">
+      <a class="brand" href="../">Injex</a>
+      <nav aria-label="Primary navigation">
+        <a href="../">Home</a>
+        <a class="active" href="./">Docs</a>
+        <a href="./api.html">API</a>
+        <a href="https://github.com/vshulcz/injex">GitHub</a>
+      </nav>
+    </header>
+    <main id="content" class="docs-shell">
+      <aside class="docs-sidebar" aria-label="Documentation navigation">
+        <p class="sidebar-title">Documentation</p>
+        <a href="./">Overview</a>
+        <a href="./getting-started.html">Getting started</a>
+        <a class="active" href="./validation.html">Validation</a>
+        <a href="./comparison.html">Comparison</a>
+        <a href="./why.html">Why Injex</a>
+        <a href="./usage.html">Usage scenarios</a>
+        <a href="./api.html">API reference</a>
+      </aside>
       <article class="docs-content">
         <p class="eyebrow">Validation</p>
         <h1>Catch dependency graph errors before startup.</h1>
-        <p>Validation checks registrations without constructing service instances. That makes it safe for startup checks and CI smoke tests.</p>
+        <p class="lead">
+          Validation checks registered classes, factories, and injected property
+          methods without constructing service instances.
+        </p>
+
         <pre><code>container = Container()
 container.add_singleton(Settings)
 container.add_transient(ApiClient)
 
 container.assert_valid()</code></pre>
-        <h2>What validation checks</h2>
-        <ul>
-          <li>Missing constructor annotations.</li>
-          <li>Missing factory parameter annotations.</li>
-          <li>Missing registrations for required dependencies.</li>
-          <li>Cyclic dependencies.</li>
-          <li>Dependencies declared through injected property methods.</li>
-        </ul>
+
+        <h2>What validation catches</h2>
+        <div class="doc-cards">
+          <div class="doc-card"><span>Annotations</span><strong>Missing types</strong><small>Constructor and factory parameters need resolvable type hints.</small></div>
+          <div class="doc-card"><span>Graph</span><strong>Missing services</strong><small>Required dependencies must be registered or optional.</small></div>
+          <div class="doc-card"><span>Safety</span><strong>Cycles</strong><small>Recursive dependency paths are reported before runtime.</small></div>
+          <div class="doc-card"><span>Properties</span><strong>Injected methods</strong><small>Property injection hooks are validated too.</small></div>
+        </div>
+
         <h2>Collect all errors</h2>
         <pre><code>errors = container.validate()
 
-for error in errors:
-    print(error)</code></pre>
-        <p class="docs-note">Validation does not call constructors or factories. Runtime errors inside service constructors still happen when the service is resolved.</p>
+if errors:
+    for error in errors:
+        print(error)</code></pre>
+
+        <p class="docs-note">
+          Validation does not call constructors or factories. Runtime errors inside
+          service constructors still happen when the service is resolved.
+        </p>
+
+        <nav class="pager" aria-label="Next pages">
+          <a href="./getting-started.html"><small>Previous</small>Getting started</a>
+          <a href="./comparison.html"><small>Next</small>Comparison</a>
+        </nav>
       </article>
     </main>
+    <footer class="site-footer"><span>Injex docs</span><span><a href="../">Home</a> · <a href="https://github.com/vshulcz/injex">GitHub</a></span></footer>
   </body>
 </html>

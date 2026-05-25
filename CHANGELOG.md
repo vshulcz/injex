@@ -16,6 +16,9 @@ and this project uses semantic versioning.
 
 - Public website now links to local documentation pages instead of only GitHub
   Markdown files.
+- Landing page and documentation pages now use a more polished visual system,
+  improved navigation, responsive cards, focus states, and reduced-motion-safe
+  CSS animations.
 
 ## [1.2.1] - 2026-05-25
 

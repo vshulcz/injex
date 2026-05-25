@@ -6,11 +6,11 @@
     <title>Injex — tiny typed DI for Python</title>
     <meta
       name="description"
-      content="Tiny typed dependency injection for Python apps that want explicit wiring without a framework-sized container."
+      content="Tiny typed dependency injection for Python apps that want explicit wiring, scoped lifetimes, test overrides, and graph validation without a framework-sized container."
     />
     <meta
       name="keywords"
-      content="python dependency injection, python di container, typed dependency injection, clean architecture python, python service wiring"
+      content="python dependency injection, python di container, typed dependency injection, clean architecture python, python service wiring, python ioc container"
     />
     <link rel="canonical" href="https://vshulcz.github.io/injex/" />
     <meta property="og:title" content="Injex — tiny typed DI for Python" />
@@ -43,9 +43,10 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
+    <a class="skip-link" href="#content">Skip to content</a>
     <header class="nav">
       <a class="brand" href="#top">Injex</a>
-      <nav>
+      <nav aria-label="Primary navigation">
         <a href="#why">Why</a>
         <a href="#fit">Use cases</a>
         <a href="#code">Example</a>
@@ -54,63 +55,90 @@
       </nav>
     </header>
 
-    <main id="top">
-      <section class="hero section">
+    <main id="content">
+      <section id="top" class="hero section">
         <div class="hero-copy">
-          <p class="eyebrow">Zero dependencies · Typed wiring · Framework-agnostic</p>
-          <h1>Tiny typed dependency injection for Python.</h1>
+          <p class="eyebrow">Zero dependencies · typed wiring · no framework lock-in</p>
+          <h1>Dependency injection that stays small.</h1>
           <p class="lead">
-            Injex gives small Python services, CLIs, and workers explicit wiring,
-            test overrides, scoped lifetimes, and graph validation without a
-            framework-sized container.
+            Injex wires Python services, CLIs, workers, and tests with normal type
+            hints, scoped lifetimes, test overrides, and graph validation before
+            startup.
           </p>
+          <div class="hero-badges" aria-label="Project strengths">
+            <span class="badge">Python 3.10–3.13</span>
+            <span class="badge">PEP 561 typed</span>
+            <span class="badge">No runtime deps</span>
+          </div>
           <div class="actions">
-            <a class="primary" href="https://github.com/vshulcz/injex">View on GitHub</a>
+            <a class="primary" href="./docs/getting-started.html">Start in 2 minutes</a>
+            <a href="https://github.com/vshulcz/injex">View on GitHub</a>
             <a href="https://pypi.org/project/injex/">PyPI package</a>
-            <a href="./docs/">Read docs</a>
           </div>
         </div>
 
-        <div class="install-card" aria-label="Install command">
-          <span>Install</span>
-          <code>pip install injex</code>
-        </div>
+        <aside class="hero-panel" aria-label="Package summary">
+          <div class="terminal-card">
+            <div class="terminal-top" aria-hidden="true">
+              <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            </div>
+            <code>pip install injex</code>
+            <small>Pure Python package. No runtime dependencies.</small>
+          </div>
+          <div class="metric-card">
+            <strong>assert_valid()</strong>
+            <span>Check the dependency graph before constructing services.</span>
+          </div>
+          <div class="metric-card">
+            <strong>override()</strong>
+            <span>Swap external dependencies in a precise test scope.</span>
+          </div>
+        </aside>
       </section>
 
       <section class="strip section" aria-label="Project highlights">
         <div><strong>0</strong><span>runtime dependencies</span></div>
         <div><strong>3</strong><span>lifetimes: singleton, transient, scoped</span></div>
-        <div><strong>3.10–3.13</strong><span>supported Python versions</span></div>
         <div><strong>typed</strong><span>constructor injection from annotations</span></div>
+        <div><strong>safe</strong><span>graph validation without object creation</span></div>
       </section>
 
       <section id="why" class="section split">
         <div>
           <p class="eyebrow">Why it exists</p>
-          <h2>For the point where manual wiring starts to spread.</h2>
+          <h2>Manual wiring is great until it leaks everywhere.</h2>
         </div>
-        <p>
-          Manual wiring is often the best starting point. Injex helps when the
-          same dependency graph appears in app startup, CLI commands, workers,
-          and tests. Keep one composition root while application code stays free
-          from framework-specific dependency hooks.
-        </p>
+        <div>
+          <p>
+            Small Python apps often start with direct constructor calls. That is the
+            right default. Injex becomes useful when the same service graph is
+            repeated across API startup, CLI commands, workers, and tests.
+          </p>
+          <p>
+            Keep one composition root. Keep application code framework-agnostic.
+            Validate the graph before real services are created.
+          </p>
+        </div>
       </section>
 
-      <section id="fit" class="cards section">
+      <section id="fit" class="cards section" aria-label="Use cases">
         <article>
+          <span class="card-icon">01</span>
           <h3>Services</h3>
           <p>Wire repositories, gateways, clients, and use cases once at startup.</p>
         </article>
         <article>
+          <span class="card-icon">02</span>
           <h3>Workers</h3>
           <p>Create one scope per job or message while reusing long-lived clients.</p>
         </article>
         <article>
+          <span class="card-icon">03</span>
           <h3>Tests</h3>
-          <p>Override external dependencies inside one explicit `with` block.</p>
+          <p>Override external dependencies inside one explicit <code>with</code> block.</p>
         </article>
         <article>
+          <span class="card-icon">04</span>
           <h3>CLIs</h3>
           <p>Share settings, API clients, and commands without module singletons.</p>
         </article>
@@ -119,11 +147,15 @@
       <section id="code" class="section code-section">
         <div>
           <p class="eyebrow">Quick start</p>
-          <h2>Normal Python types. Small container API.</h2>
+          <h2>Normal Python types. One small container.</h2>
           <p>
-            Register services at the boundary, validate the graph, then resolve
-            application services from one place.
+            Register services at the boundary, validate wiring, then resolve the
+            application service. Constructors stay plain and readable.
           </p>
+          <div class="actions">
+            <a href="./docs/getting-started.html">Read the guide</a>
+            <a href="./docs/api.html">API reference</a>
+          </div>
         </div>
         <pre><code>from injex import Container
 
@@ -144,12 +176,11 @@ service = container.resolve(Service)</code></pre>
 
       <section class="section comparison">
         <p class="eyebrow">Positioning</p>
-        <h2>Small by design.</h2>
+        <h2>Small by design, useful by contract.</h2>
         <p>
-          Injex is not trying to be a configuration framework. It focuses on the
-          boring 80%: typed constructor injection, scoped lifetimes, factories,
-          named registrations, test overrides, and validation without object
-          creation.
+          Injex is not a configuration framework. It covers the boring path:
+          typed constructor injection, scoped lifetimes, factories, named
+          registrations, test overrides, and validation without object creation.
         </p>
         <div class="actions">
           <a href="./docs/why.html">Read why Injex</a>
@@ -158,7 +189,7 @@ service = container.resolve(Service)</code></pre>
         </div>
       </section>
 
-      <section class="section decision">
+      <section class="section decision" aria-label="Decision guide">
         <div>
           <h3>Use Injex when</h3>
           <ul>
@@ -179,12 +210,12 @@ service = container.resolve(Service)</code></pre>
 
       <section class="section docs-preview">
         <p class="eyebrow">Documentation</p>
-        <h2>Readable docs for real Python application wiring.</h2>
+        <h2>Docs built around decisions, not only API calls.</h2>
         <div class="docs-grid">
           <a href="./docs/getting-started.html">
             <span>01</span>
             <strong>Getting started</strong>
-            <small>Register services, validate the graph, resolve use cases.</small>
+            <small>Install, register, validate, resolve.</small>
           </a>
           <a href="./docs/validation.html">
             <span>02</span>
@@ -199,5 +230,14 @@ service = container.resolve(Service)</code></pre>
         </div>
       </section>
     </main>
+
+    <footer class="site-footer">
+      <span>Injex · tiny typed dependency injection for Python.</span>
+      <span>
+        <a href="./docs/">Docs</a> ·
+        <a href="https://github.com/vshulcz/injex">GitHub</a> ·
+        <a href="https://pypi.org/project/injex/">PyPI</a>
+      </span>
+    </footer>
   </body>
 </html>

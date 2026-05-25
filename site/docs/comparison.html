@@ -4,24 +4,84 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Python DI container comparison — Injex vs manual wiring</title>
-    <meta name="description" content="Compare Injex with manual wiring, framework dependency systems, and larger Python dependency injection containers." />
+    <meta
+      name="description"
+      content="Compare Injex with manual wiring, framework dependency systems, and larger Python dependency injection containers."
+    />
     <link rel="canonical" href="https://vshulcz.github.io/injex/docs/comparison.html" />
     <link rel="stylesheet" href="../styles.css" />
   </head>
   <body class="docs-page">
-    <header class="nav"><a class="brand" href="../">Injex</a><nav><a href="./">Docs</a><a href="./getting-started.html">Start</a><a href="https://github.com/vshulcz/injex">GitHub</a></nav></header>
-    <main class="docs-shell">
-      <aside class="docs-sidebar"><a href="./">Overview</a><a href="./getting-started.html">Getting started</a><a href="./validation.html">Validation</a><a class="active" href="./comparison.html">Comparison</a><a href="./why.html">Why Injex</a><a href="./usage.html">Usage scenarios</a><a href="./api.html">API reference</a></aside>
+    <a class="skip-link" href="#content">Skip to content</a>
+    <header class="nav">
+      <a class="brand" href="../">Injex</a>
+      <nav aria-label="Primary navigation">
+        <a href="../">Home</a>
+        <a class="active" href="./">Docs</a>
+        <a href="./getting-started.html">Start</a>
+        <a href="https://github.com/vshulcz/injex">GitHub</a>
+      </nav>
+    </header>
+    <main id="content" class="docs-shell">
+      <aside class="docs-sidebar" aria-label="Documentation navigation">
+        <p class="sidebar-title">Documentation</p>
+        <a href="./">Overview</a>
+        <a href="./getting-started.html">Getting started</a>
+        <a href="./validation.html">Validation</a>
+        <a class="active" href="./comparison.html">Comparison</a>
+        <a href="./why.html">Why Injex</a>
+        <a href="./usage.html">Usage scenarios</a>
+        <a href="./api.html">API reference</a>
+      </aside>
       <article class="docs-content">
         <p class="eyebrow">Comparison</p>
         <h1>When should you use a Python DI container?</h1>
-        <p>Injex is for shared service graphs across APIs, CLIs, workers, and tests. It is not meant to replace every Python dependency management style.</p>
-        <div class="table-wrap"><table><thead><tr><th>Need</th><th>Good fit</th></tr></thead><tbody><tr><td>A few dependencies in one entrypoint</td><td>Manual wiring</td></tr><tr><td>Request dependencies inside one framework</td><td>Framework dependency system</td></tr><tr><td>Shared service graph across API, CLI, worker, and tests</td><td>Injex</td></tr><tr><td>Typed constructor injection without provider DSL</td><td>Injex</td></tr><tr><td>Complex provider/configuration framework</td><td>Larger DI container</td></tr></tbody></table></div>
-        <h2>Choose Injex when</h2>
-        <ul><li>You want a small API surface.</li><li>Constructors already express dependencies with type hints.</li><li>Tests need temporary overrides.</li><li>Startup should validate the graph before real objects are built.</li></ul>
-        <h2>Skip Injex when</h2>
-        <ul><li>Manual wiring is still clear.</li><li>Every entrypoint is already managed by a framework.</li><li>You need a rich provider/configuration DSL.</li></ul>
+        <p class="lead">
+          Injex is for shared service graphs across APIs, CLIs, workers, and
+          tests. It is not meant to replace every Python dependency style.
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Need</th><th>Good fit</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>A few dependencies in one entrypoint</td><td>Manual wiring</td><td>Direct constructor calls stay clearest.</td></tr>
+              <tr><td>Request dependencies inside one framework</td><td>Framework DI</td><td>The framework already owns the request lifecycle.</td></tr>
+              <tr><td>Shared service graph across API, CLI, worker, and tests</td><td>Injex</td><td>One composition root avoids repeated setup code.</td></tr>
+              <tr><td>Typed constructor injection without provider DSL</td><td>Injex</td><td>Normal Python annotations become the wiring contract.</td></tr>
+              <tr><td>Complex provider/configuration framework</td><td>Larger DI container</td><td>Use a heavier tool when a rich DSL is the product need.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2>What Injex optimizes for</h2>
+        <ul>
+          <li>Small API surface that is easy to read in application startup.</li>
+          <li>Constructor injection from existing type hints.</li>
+          <li>Explicit test overrides instead of global monkeypatching.</li>
+          <li>Graph validation before real services are constructed.</li>
+        </ul>
+
+        <h2>What it intentionally avoids</h2>
+        <ul>
+          <li>Runtime dependencies.</li>
+          <li>Large provider/configuration DSLs.</li>
+          <li>Framework-specific core APIs.</li>
+          <li>Required decorators for normal constructor injection.</li>
+        </ul>
+
+        <p class="callout">
+          <strong>Short answer:</strong> if manual wiring is still obvious, keep it.
+          If the same graph is repeated across entrypoints and tests, Injex starts
+          to pay for itself.
+        </p>
+
+        <nav class="pager" aria-label="Next pages">
+          <a href="./validation.html"><small>Previous</small>Validation</a>
+          <a href="./why.html"><small>Next</small>Why Injex</a>
+        </nav>
       </article>
     </main>
+    <footer class="site-footer"><span>Injex docs</span><span><a href="../">Home</a> · <a href="https://github.com/vshulcz/injex">GitHub</a></span></footer>
   </body>
 </html>

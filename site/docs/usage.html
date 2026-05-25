@@ -4,23 +4,72 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Injex usage scenarios — services, CLIs, workers, tests</title>
-    <meta name="description" content="Where Injex fits: Python service layer wiring, CLI applications, background workers, tests, and startup validation." />
+    <meta
+      name="description"
+      content="Where Injex fits: Python service layer wiring, CLI applications, background workers, tests, and startup validation."
+    />
     <link rel="canonical" href="https://vshulcz.github.io/injex/docs/usage.html" />
     <link rel="stylesheet" href="../styles.css" />
   </head>
   <body class="docs-page">
-    <header class="nav"><a class="brand" href="../">Injex</a><nav><a href="./">Docs</a><a href="./api.html">API</a><a href="https://github.com/vshulcz/injex">GitHub</a></nav></header>
-    <main class="docs-shell">
-      <aside class="docs-sidebar"><a href="./">Overview</a><a href="./getting-started.html">Getting started</a><a href="./validation.html">Validation</a><a href="./comparison.html">Comparison</a><a href="./why.html">Why Injex</a><a class="active" href="./usage.html">Usage scenarios</a><a href="./api.html">API reference</a></aside>
+    <a class="skip-link" href="#content">Skip to content</a>
+    <header class="nav">
+      <a class="brand" href="../">Injex</a>
+      <nav aria-label="Primary navigation">
+        <a href="../">Home</a>
+        <a class="active" href="./">Docs</a>
+        <a href="./api.html">API</a>
+        <a href="https://github.com/vshulcz/injex">GitHub</a>
+      </nav>
+    </header>
+    <main id="content" class="docs-shell">
+      <aside class="docs-sidebar" aria-label="Documentation navigation">
+        <p class="sidebar-title">Documentation</p>
+        <a href="./">Overview</a>
+        <a href="./getting-started.html">Getting started</a>
+        <a href="./validation.html">Validation</a>
+        <a href="./comparison.html">Comparison</a>
+        <a href="./why.html">Why Injex</a>
+        <a class="active" href="./usage.html">Usage scenarios</a>
+        <a href="./api.html">API reference</a>
+      </aside>
       <article class="docs-content">
         <p class="eyebrow">Usage scenarios</p>
         <h1>One service graph across multiple Python entrypoints.</h1>
-        <h2>Service layer wiring</h2><p>Wire repositories, gateways, clients, and use cases once at startup. Application code can depend on normal Python types while startup owns composition.</p>
-        <h2>CLI applications</h2><p>CLI commands often share settings, API clients, repositories, and service objects. A container keeps setup in one place without module-level singletons.</p>
-        <h2>Background workers</h2><p>Workers often need long-lived clients and short-lived per-job state. Register clients as singletons and create one scope per job or message.</p>
-        <h2>Tests</h2><p>Use <code>override()</code> to replace slow or external services with fakes inside one specific test block.</p>
-        <h2>Startup validation</h2><p>Use <code>validate()</code> or <code>assert_valid()</code> in startup checks and CI smoke tests.</p>
+        <p class="lead">
+          Injex is most useful when application services are reused from more than
+          one place: an API, CLI command, background worker, and test suite.
+        </p>
+
+        <div class="steps">
+          <div class="step"><span>API</span><div><strong>Service layer wiring</strong><p>Wire repositories, gateways, clients, and use cases once at startup. Handlers resolve or receive application services without owning construction logic.</p></div></div>
+          <div class="step"><span>CLI</span><div><strong>Shared command setup</strong><p>Commands can share settings, API clients, repositories, and services without module-level singletons.</p></div></div>
+          <div class="step"><span>Job</span><div><strong>Background workers</strong><p>Register long-lived clients as singletons and create one scope per job or message for short-lived state.</p></div></div>
+          <div class="step"><span>Test</span><div><strong>Temporary overrides</strong><p>Use <code>override()</code> to replace slow or external services with fakes inside one test block.</p></div></div>
+        </div>
+
+        <h2>Startup validation</h2>
+        <p>
+          Add <code>container.assert_valid()</code> to application startup or CI smoke
+          checks when you want missing registrations and cycles to fail early.
+        </p>
+
+        <pre><code>container = build_container()
+container.assert_valid()
+
+run_app(container)</code></pre>
+
+        <p class="docs-note">
+          These are usage scenarios, not production adoption claims. The docs show
+          where the library fits and where it should stay out of the way.
+        </p>
+
+        <nav class="pager" aria-label="Next pages">
+          <a href="./why.html"><small>Previous</small>Why Injex</a>
+          <a href="./api.html"><small>Next</small>API reference</a>
+        </nav>
       </article>
     </main>
+    <footer class="site-footer"><span>Injex docs</span><span><a href="../">Home</a> · <a href="https://github.com/vshulcz/injex">GitHub</a></span></footer>
   </body>
 </html>
