@@ -153,6 +153,7 @@ explicit while still covering common application wiring needs.
 - [API reference](./docs/api.md)
 - [Clean architecture example](./examples/clean_architecture.py)
 - [CLI application example](./examples/cli_app.py)
+- [FastAPI application service example](./examples/fastapi_app.py)
 - [Testing overrides example](./examples/testing.py)
 - [Scoped lifetime example](./examples/scoped.py)
 - [Factories example](./examples/factory.py)
