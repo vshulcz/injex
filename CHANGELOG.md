@@ -11,6 +11,8 @@ and this project uses semantic versioning.
 
 - SEO-focused documentation site pages with canonical URLs, sitemap, robots.txt,
   Open Graph metadata, and structured data.
+- Shareable article page explaining why a small Python DI container can be useful
+  for services, CLIs, workers, tests, and clean architecture.
 
 ### Changed
 
@@ -21,6 +23,8 @@ and this project uses semantic versioning.
   CSS animations.
 - Added a keyword-focused Python dependency injection guide and `llms.txt` to
   improve discoverability for search and AI-assisted documentation tools.
+- Sitemap now contains only indexable HTML pages, with service files kept outside
+  the sitemap.
 
 ## [1.2.1] - 2026-05-25
 

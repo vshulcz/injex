@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Why build a tiny Python dependency injection container?</title>
+    <meta
+      name="description"
+      content="Why a small typed Python dependency injection container can be useful for services, CLIs, workers, tests, and clean architecture without a large framework."
+    />
+    <meta
+      name="keywords"
+      content="python dependency injection, python di container, clean architecture python, typed dependency injection, python services"
+    />
+    <link rel="canonical" href="https://vshulcz.github.io/injex/articles/why-tiny-python-di.html" />
+    <meta property="og:title" content="Why build a tiny Python dependency injection container?" />
+    <meta
+      property="og:description"
+      content="A practical explanation of where a small typed DI container fits in Python services, CLIs, workers, and tests."
+    />
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://vshulcz.github.io/injex/articles/why-tiny-python-di.html" />
+    <meta name="twitter:card" content="summary" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": "Why build a tiny Python dependency injection container?",
+        "description": "Why a small typed Python dependency injection container can be useful for services, CLIs, workers, tests, and clean architecture without a large framework.",
+        "author": {"@type": "Person", "name": "Vlad Shulcz"},
+        "mainEntityOfPage": "https://vshulcz.github.io/injex/articles/why-tiny-python-di.html",
+        "dateModified": "2026-05-26"
+      }
+    </script>
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="docs-page">
+    <a class="skip-link" href="#content">Skip to content</a>
+    <header class="nav">
+      <a class="brand" href="../">Injex</a>
+      <nav aria-label="Primary navigation">
+        <a href="../">Home</a>
+        <a href="../docs/">Docs</a>
+        <a href="../docs/comparison.html">Compare</a>
+        <a href="https://github.com/vshulcz/injex">GitHub</a>
+      </nav>
+    </header>
+    <main id="content" class="docs-shell">
+      <aside class="docs-sidebar" aria-label="Article navigation">
+        <p class="sidebar-title">Article</p>
+        <a class="active" href="./why-tiny-python-di.html">Why tiny DI</a>
+        <a href="../docs/python-dependency-injection.html">Python DI guide</a>
+        <a href="../docs/comparison.html">Comparison</a>
+        <a href="../docs/getting-started.html">Getting started</a>
+        <a href="https://github.com/vshulcz/injex">Star on GitHub</a>
+      </aside>
+      <article class="docs-content">
+        <p class="eyebrow">Python dependency injection</p>
+        <h1>Why build a tiny Python DI container?</h1>
+        <p class="lead">
+          Python does not need dependency injection everywhere. Injex exists for a
+          narrower case: service code that should stay explicit, typed, testable,
+          and independent from a web framework.
+        </p>
+
+        <h2>The problem is not object creation. It is repeated wiring.</h2>
+        <p>
+          Direct constructor calls are a good default. They are readable and they
+          keep dependencies visible. The problem starts when the same graph is
+          recreated in API startup, CLI commands, background workers, tests, and
+          one-off scripts.
+        </p>
+        <p>
+          At that point the project needs a composition root: one place where
+          repositories, clients, gateways, settings, and use cases are connected.
+          Injex gives that structure without turning the application into a
+          provider-configuration project.
+        </p>
+
+        <h2>Why not use only framework dependencies?</h2>
+        <p>
+          Framework dependency systems are useful when all entrypoints live inside
+          the framework. Many real projects do not look like that. The same service
+          layer may be called by a web API, a CLI task, a queue worker, and tests.
+          Injex keeps that graph portable.
+        </p>
+
+        <h2>What makes Injex small?</h2>
+        <ul>
+          <li>No runtime dependencies.</li>
+          <li>No large provider DSL.</li>
+          <li>No required decorators for constructor injection.</li>
+          <li>Normal Python type hints as the dependency contract.</li>
+          <li>Scoped test overrides and startup validation as practical DX features.</li>
+        </ul>
+
+        <h2>Where it fits best</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Project shape</th><th>Why Injex helps</th></tr></thead>
+            <tbody>
+              <tr><td>Service layer + CLI</td><td>One graph can be reused outside web handlers.</td></tr>
+              <tr><td>Background workers</td><td>Scoped lifetimes work well for jobs and messages.</td></tr>
+              <tr><td>Clean architecture</td><td>Use cases depend on interfaces, not framework hooks.</td></tr>
+              <tr><td>Tests with external services</td><td><code>override()</code> replaces gateways with fakes in one block.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2>The trade-off</h2>
+        <p>
+          A DI container is still another abstraction. If manual wiring is clear,
+          keep manual wiring. Injex is designed for the point where explicit wiring
+          needs a small home, not for replacing simple Python code with ceremony.
+        </p>
+
+        <p class="callout">
+          <strong>Try it when:</strong> your Python app has a shared service graph,
+          tests need clean overrides, and startup should validate dependencies
+          before real objects are constructed.
+        </p>
+
+        <nav class="pager" aria-label="Next pages">
+          <a href="../docs/getting-started.html"><small>Try it</small>Getting started</a>
+          <a href="https://github.com/vshulcz/injex"><small>Support</small>Star on GitHub</a>
+        </nav>
+      </article>
+    </main>
+    <footer class="site-footer"><span>Injex article</span><span><a href="../docs/">Docs</a> · <a href="https://github.com/vshulcz/injex">GitHub</a></span></footer>
+  </body>
+</html>

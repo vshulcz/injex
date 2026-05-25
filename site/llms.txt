@@ -12,6 +12,7 @@ Important pages:
 - Documentation: https://vshulcz.github.io/injex/docs/
 - Getting started: https://vshulcz.github.io/injex/docs/getting-started.html
 - Python dependency injection guide: https://vshulcz.github.io/injex/docs/python-dependency-injection.html
+- Article: https://vshulcz.github.io/injex/articles/why-tiny-python-di.html
 - Comparison guide: https://vshulcz.github.io/injex/docs/comparison.html
 - API reference: https://vshulcz.github.io/injex/docs/api.html
 - GitHub: https://github.com/vshulcz/injex
