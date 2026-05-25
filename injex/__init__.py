@@ -107,6 +107,36 @@ class Registration:
         self.lifestyle = lifestyle
 
 
+class OverrideContext:
+    def __init__(
+        self,
+        container: "Container",
+        key: Tuple[Union[Type, str], Optional[str]],
+        registration: Registration,
+    ):
+        self.container = container
+        self.key = key
+        self.registration = registration
+        self._previous_registrations: Optional[List[Registration]] = None
+        self._previous_singletons: Dict[Any, Any] = {}
+
+    def __enter__(self) -> "Container":
+        self._previous_registrations = list(
+            self.container._registrations.get(self.key, [])
+        )
+        self._previous_singletons = self.container._pop_singletons_for_key(self.key)
+        self.container._registrations[self.key] = [self.registration]
+        return self.container
+
+    def __exit__(self, exc_type: Any, exc: Any, traceback: Any) -> None:
+        self.container._pop_singletons_for_key(self.key)
+        if self._previous_registrations:
+            self.container._registrations[self.key] = self._previous_registrations
+        else:
+            self.container._registrations.pop(self.key, None)
+        self.container._singletons.update(self._previous_singletons)
+
+
 class Container:
     __slots__ = ("_registrations", "_singletons", "_resolving")
 
@@ -171,6 +201,64 @@ class Container:
             lifestyle=LifeStyle.SINGLETON,
         )
         self._registrations.setdefault(key, []).append(registration)
+
+    def override(
+        self,
+        interface: Type,
+        implementation: Optional[Type] = None,
+        *,
+        factory: Optional[Callable[..., Any]] = None,
+        instance: Optional[Any] = None,
+        lifestyle: str = LifeStyle.TRANSIENT,
+        name: Optional[str] = None,
+    ) -> OverrideContext:
+        provided = sum(
+            value is not None for value in (implementation, factory, instance)
+        )
+        if provided > 1:
+            raise ValueError(
+                "Provide only one override target: implementation, factory, or instance."
+            )
+        if lifestyle not in (
+            LifeStyle.TRANSIENT,
+            LifeStyle.SINGLETON,
+            LifeStyle.SCOPED,
+        ):
+            raise InvalidLifestyleException(lifestyle)
+
+        if instance is not None:
+            registration = Registration(
+                kind=RegistrationType.INSTANCE,
+                instance=instance,
+                lifestyle=LifeStyle.SINGLETON,
+            )
+        elif factory is not None:
+            if not callable(factory):
+                raise ValueError("Factory must be callable")
+            registration = Registration(
+                kind=RegistrationType.FACTORY,
+                factory=factory,
+                lifestyle=lifestyle,
+            )
+        else:
+            if implementation is None:
+                implementation = interface
+            registration = Registration(
+                kind=RegistrationType.SERVICE,
+                implementation=implementation,
+                lifestyle=lifestyle,
+            )
+
+        return OverrideContext(self, (interface, name), registration)
+
+    def _pop_singletons_for_key(
+        self, key: Tuple[Union[Type, str], Optional[str]]
+    ) -> Dict[Any, Any]:
+        removed = {}
+        for instance_key in list(self._singletons):
+            if instance_key[0] == key:
+                removed[instance_key] = self._singletons.pop(instance_key)
+        return removed
 
     def resolve(self, interface: Union[Type, str], name: Optional[str] = None) -> Any:
         scope = self.create_scope()

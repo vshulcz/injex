@@ -18,6 +18,7 @@
 - [Property Injection](#property-injection)
 - [Named Registrations](#named-registrations)
 - [Optional Dependencies](#optional-dependencies)
+- [Test Overrides](#test-overrides)
 3. [Advanced Topics](#advanced-topics)
 - [Scopes and Scoped Services](#scopes-and-scoped-services)
 - [Cyclic Dependencies](#cyclic-dependencies)
@@ -225,6 +226,54 @@ container.add_transient(DataService)
 data_service = container.resolve(DataService)
 assert data_service.cache is None  # CacheService was not registered
 ```
+
+### Test Overrides
+
+Use `override()` when a test needs a fake implementation without changing the
+application container permanently.
+
+```python
+from injex import Container
+
+
+class PaymentGateway:
+    def charge(self, amount: int) -> str:
+        return "real-payment-id"
+
+
+class FakePaymentGateway:
+    def __init__(self):
+        self.charges = []
+
+    def charge(self, amount: int) -> str:
+        self.charges.append(amount)
+        return "test-payment-id"
+
+
+class Checkout:
+    def __init__(self, payments: PaymentGateway):
+        self.payments = payments
+
+    def pay(self, amount: int) -> str:
+        return self.payments.charge(amount)
+
+
+container = Container()
+container.add_singleton(PaymentGateway)
+container.add_transient(Checkout)
+
+fake_payments = FakePaymentGateway()
+
+with container.override(PaymentGateway, instance=fake_payments):
+    checkout = container.resolve(Checkout)
+    assert checkout.pay(1999) == "test-payment-id"
+
+assert fake_payments.charges == [1999]
+```
+
+The original registration is restored when the context exits. Existing scoped
+instances are not rewritten, so create scopes inside the override block when the
+test uses scoped services.
 
 ## Advanced Topics
 

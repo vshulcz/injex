@@ -878,6 +878,86 @@ class TestContainer(unittest.TestCase):
             self.container.resolve_all(IService)
         self.assertIn("Factory error", str(context.exception))
 
+    def test_override_instance_is_restored_after_context(self):
+        class Gateway:
+            def charge(self) -> str:
+                return "real"
+
+        class FakeGateway:
+            def charge(self) -> str:
+                return "fake"
+
+        self.container.add_singleton(Gateway)
+        real_gateway = self.container.resolve(Gateway)
+        fake_gateway = FakeGateway()
+
+        with self.container.override(Gateway, instance=fake_gateway):
+            self.assertIs(self.container.resolve(Gateway), fake_gateway)
+            self.assertEqual(self.container.resolve(Gateway).charge(), "fake")
+
+        self.assertIs(self.container.resolve(Gateway), real_gateway)
+        self.assertEqual(self.container.resolve(Gateway).charge(), "real")
+
+    def test_override_implementation(self):
+        class IService(ABC):
+            @abstractmethod
+            def get_value(self) -> str: ...
+
+        class RealService(IService):
+            def get_value(self) -> str:
+                return "real"
+
+        class FakeService(IService):
+            def get_value(self) -> str:
+                return "fake"
+
+        self.container.add_transient(IService, RealService)
+
+        with self.container.override(IService, FakeService):
+            self.assertIsInstance(self.container.resolve(IService), FakeService)
+            self.assertEqual(self.container.resolve(IService).get_value(), "fake")
+
+        self.assertIsInstance(self.container.resolve(IService), RealService)
+
+    def test_override_factory_with_dependencies(self):
+        class Dependency:
+            def get_value(self) -> int:
+                return 7
+
+        class IService(ABC):
+            @abstractmethod
+            def get_value(self) -> int: ...
+
+        class Service(IService):
+            def get_value(self) -> int:
+                return 1
+
+        class FactoryService(IService):
+            def __init__(self, dependency: Dependency):
+                self.dependency = dependency
+
+            def get_value(self) -> int:
+                return self.dependency.get_value()
+
+        def factory(dependency: Dependency) -> IService:
+            return FactoryService(dependency)
+
+        self.container.add_singleton(Dependency)
+        self.container.add_transient(IService, Service)
+
+        with self.container.override(IService, factory=factory):
+            self.assertEqual(self.container.resolve(IService).get_value(), 7)
+
+        self.assertEqual(self.container.resolve(IService).get_value(), 1)
+
+    def test_override_rejects_multiple_targets(self):
+        class Service: ...
+
+        with self.assertRaises(ValueError) as context:
+            self.container.override(Service, Service, instance=Service())
+
+        self.assertIn("Provide only one override target", str(context.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

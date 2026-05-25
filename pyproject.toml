@@ -1,8 +1,8 @@
 [project]
 name = "injex"
-version = "1.0.0"
+version = "1.1.0"
 authors = [{name = "vshulcz", email = "vshulcz@gmail.com"}]
-description = "DI container for Python applications"
+description = "Tiny zero-dependency dependency injection container for Python"
 readme = "README.md"
 requires-python = ">=3.10"
 classifiers = [
@@ -15,7 +15,7 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Operating System :: OS Independent",
 ]
-keywords = ["dependency", "injection", "di", "container", "ddd"]
+keywords = ["dependency-injection", "di", "container", "ioc", "clean-architecture", "testing"]
 dependencies = []
 
 [tool.uv]
@@ -28,3 +28,6 @@ dev-dependencies = [
 
 [project.urls]
 "Homepage" = "https://github.com/vshulcz/injex"
+"Repository" = "https://github.com/vshulcz/injex"
+"Documentation" = "https://github.com/vshulcz/injex/blob/main/docs/tutorial.md"
+"Issues" = "https://github.com/vshulcz/injex/issues"
