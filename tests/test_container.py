@@ -953,6 +953,76 @@ class TestContainer(unittest.TestCase):
 
         self.assertEqual(self.container.resolve(IService).get_value(), 1)
 
+    def test_nested_override_restores_outer_override_then_original(self):
+        class Gateway:
+            def get_value(self) -> str:
+                return "real"
+
+        class OuterGateway:
+            def get_value(self) -> str:
+                return "outer"
+
+        class InnerGateway:
+            def get_value(self) -> str:
+                return "inner"
+
+        self.container.add_transient(Gateway)
+
+        with self.container.override(Gateway, OuterGateway):
+            self.assertIsInstance(self.container.resolve(Gateway), OuterGateway)
+            self.assertEqual(self.container.resolve(Gateway).get_value(), "outer")
+
+            with self.container.override(Gateway, InnerGateway):
+                self.assertIsInstance(self.container.resolve(Gateway), InnerGateway)
+                self.assertEqual(self.container.resolve(Gateway).get_value(), "inner")
+
+            self.assertIsInstance(self.container.resolve(Gateway), OuterGateway)
+            self.assertEqual(self.container.resolve(Gateway).get_value(), "outer")
+
+        self.assertIsInstance(self.container.resolve(Gateway), Gateway)
+        self.assertEqual(self.container.resolve(Gateway).get_value(), "real")
+
+    def test_nested_override_restores_singleton_instances(self):
+        class Service:
+            def __init__(self, value: str):
+                self.value = value
+
+        class RealService(Service):
+            def __init__(self):
+                super().__init__("real")
+
+        class OuterService(Service):
+            def __init__(self):
+                super().__init__("outer")
+
+        class InnerService(Service):
+            def __init__(self):
+                super().__init__("inner")
+
+        self.container.add_singleton(Service, RealService)
+        real_service = self.container.resolve(Service)
+
+        with self.container.override(
+            Service, OuterService, lifestyle=LifeStyle.SINGLETON
+        ):
+            outer_service = self.container.resolve(Service)
+            self.assertIs(outer_service, self.container.resolve(Service))
+            self.assertEqual(outer_service.value, "outer")
+
+            with self.container.override(
+                Service, InnerService, lifestyle=LifeStyle.SINGLETON
+            ):
+                inner_service = self.container.resolve(Service)
+                self.assertIs(inner_service, self.container.resolve(Service))
+                self.assertIsNot(inner_service, outer_service)
+                self.assertEqual(inner_service.value, "inner")
+
+            self.assertIs(self.container.resolve(Service), outer_service)
+            self.assertEqual(self.container.resolve(Service).value, "outer")
+
+        self.assertIs(self.container.resolve(Service), real_service)
+        self.assertEqual(self.container.resolve(Service).value, "real")
+
     def test_override_rejects_multiple_targets(self):
         class Service: ...
 
