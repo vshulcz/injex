@@ -19,6 +19,8 @@ and this project uses semantic versioning.
 - Landing page and documentation pages now use a more polished visual system,
   improved navigation, responsive cards, focus states, and reduced-motion-safe
   CSS animations.
+- Added a keyword-focused Python dependency injection guide and `llms.txt` to
+  improve discoverability for search and AI-assisted documentation tools.
 
 ## [1.2.1] - 2026-05-25
 

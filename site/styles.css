@@ -165,10 +165,10 @@ button:focus-visible {
 
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 390px;
+  grid-template-columns: minmax(0, 1fr) 370px;
   gap: 18px;
   align-items: stretch;
-  padding: 84px 0 22px;
+  padding: 74px 0 22px;
 }
 
 .surface,
@@ -218,7 +218,7 @@ button:focus-visible {
 }
 
 .hero-copy {
-  padding: clamp(34px, 7vw, 72px);
+  padding: clamp(34px, 6vw, 64px);
 }
 
 .hero-panel {
@@ -294,7 +294,7 @@ pre code {
 .metric-card strong {
   display: block;
   margin-bottom: 4px;
-  font-size: 34px;
+  font-size: 30px;
   letter-spacing: -0.05em;
 }
 
@@ -345,9 +345,9 @@ p {
 h1 {
   max-width: 880px;
   margin-bottom: 22px;
-  font-size: clamp(48px, 8vw, 92px);
-  line-height: 0.9;
-  letter-spacing: -0.08em;
+  font-size: clamp(44px, 7vw, 78px);
+  line-height: 0.94;
+  letter-spacing: -0.07em;
 }
 
 h2 {
@@ -672,7 +672,7 @@ pre code {
 
 .docs-content h1 {
   max-width: 780px;
-  font-size: clamp(42px, 6vw, 72px);
+  font-size: clamp(40px, 5.2vw, 66px);
 }
 
 .docs-content h2 {
@@ -706,6 +706,36 @@ pre code {
 .callout strong,
 .docs-note strong {
   color: var(--text);
+}
+
+.seo-section {
+  margin-top: 26px;
+  padding: clamp(28px, 5vw, 56px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background:
+    radial-gradient(circle at 88% 12%, rgba(103, 232, 249, 0.12), transparent 18rem),
+    var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.seo-section p {
+  max-width: 900px;
+}
+
+.keyword-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.keyword-list span {
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .steps {

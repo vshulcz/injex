@@ -2,3 +2,5 @@ User-agent: *
 Allow: /
 
 Sitemap: https://vshulcz.github.io/injex/sitemap.xml
+
+Host: https://vshulcz.github.io
