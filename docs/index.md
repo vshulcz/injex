@@ -10,6 +10,7 @@ framework-sized dependency injection container.
 - [Container validation](./validation.md): check wiring before startup without
   creating service instances.
 - [API reference](./api.md): public methods, exceptions, and import surface.
+- [Release process](./releasing.md): maintainer checklist for versioned releases.
 
 ## Examples
 

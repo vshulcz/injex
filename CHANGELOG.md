@@ -7,6 +7,17 @@ and this project uses semantic versioning.
 
 ## [Unreleased]
 
+### Added
+
+- Release workflow for tagged builds with wheel smoke tests and release assets.
+- Release checklist for maintainers.
+- CODEOWNERS and issue template chooser configuration.
+
+### Changed
+
+- CI now uses `astral-sh/setup-uv`, builds distributions, smoke-tests wheels,
+  and avoids failing fork pull requests on Codecov token availability.
+
 ## [1.2.0] - 2026-05-25
 
 ### Added
