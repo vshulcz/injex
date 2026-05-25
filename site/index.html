@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Injex — tiny typed DI for Python</title>
+    <meta
+      name="description"
+      content="Tiny typed dependency injection for Python apps that want explicit wiring without a framework-sized container."
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <p class="eyebrow">Zero dependencies · Typed wiring · Framework-agnostic</p>
+        <h1>Injex</h1>
+        <p class="lead">
+          Tiny typed dependency injection for Python apps that want explicit
+          wiring without a framework-sized container.
+        </p>
+        <div class="actions">
+          <a href="https://github.com/vshulcz/injex">GitHub</a>
+          <a href="https://pypi.org/project/injex/">PyPI</a>
+          <a href="https://github.com/vshulcz/injex/blob/main/docs/index.md">Docs</a>
+        </div>
+      </section>
+
+      <section class="grid">
+        <article>
+          <h2>Small API</h2>
+          <p>
+            Register services, factories, instances, and lifetimes without a
+            provider DSL or runtime dependencies.
+          </p>
+        </article>
+        <article>
+          <h2>Typed injection</h2>
+          <p>
+            Constructors use normal Python type hints, so application code stays
+            explicit and framework-independent.
+          </p>
+        </article>
+        <article>
+          <h2>Testable by design</h2>
+          <p>
+            Use temporary overrides and graph validation to catch wiring errors
+            before startup or slow integration tests.
+          </p>
+        </article>
+      </section>
+
+      <section class="code-block">
+        <h2>Quick start</h2>
+        <pre><code>from injex import Container
+
+class Repository:
+    pass
+
+class Service:
+    def __init__(self, repo: Repository):
+        self.repo = repo
+
+container = Container()
+container.add_singleton(Repository)
+container.add_transient(Service)
+container.assert_valid()
+
+service = container.resolve(Service)</code></pre>
+      </section>
+    </main>
+  </body>
+</html>

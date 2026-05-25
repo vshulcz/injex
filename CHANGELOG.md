@@ -12,6 +12,8 @@ and this project uses semantic versioning.
 - Release workflow for tagged builds with wheel smoke tests and release assets.
 - Release checklist for maintainers.
 - CODEOWNERS and issue template chooser configuration.
+- GitHub Pages-ready docs site.
+- Positioning guide, usage scenarios, and launch copy for external distribution.
 
 ### Changed
 

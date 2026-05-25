@@ -30,9 +30,12 @@ dev-dependencies = [
 [project.urls]
 "Homepage" = "https://github.com/vshulcz/injex"
 "Repository" = "https://github.com/vshulcz/injex"
-"Documentation" = "https://github.com/vshulcz/injex/blob/main/docs/index.md"
+"Documentation" = "https://vshulcz.github.io/injex/"
 "Issues" = "https://github.com/vshulcz/injex/issues"
 "Changelog" = "https://github.com/vshulcz/injex/blob/main/CHANGELOG.md"
 
 [tool.setuptools.package-data]
 injex = ["py.typed"]
+
+[tool.setuptools.packages.find]
+include = ["injex*"]

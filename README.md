@@ -6,12 +6,13 @@
 [![Python Versions](https://img.shields.io/badge/python-3.10%20|%203.11%20|%203.12%20|%203.13-blue)](https://github.com/vshulcz/injex)
 [![License](https://img.shields.io/github/license/vshulcz/injex.svg)](https://github.com/vshulcz/injex/blob/main/LICENSE)
 
-Tiny zero-dependency dependency injection container for Python services, CLIs,
-workers, and clean architecture applications.
+Tiny typed dependency injection for Python apps that want explicit wiring without
+a framework-sized container.
 
-Injex is useful when hand-wiring dependencies starts to get noisy, but a large
-framework-style container would be too much. It keeps the API small and uses
-normal Python type hints for constructor injection.
+Injex keeps constructor injection boring: normal type hints, zero runtime
+dependencies, scoped lifetimes, test overrides, and graph validation before your
+app starts. It is designed for services, CLIs, workers, and clean architecture
+code that should stay framework-agnostic.
 
 ```bash
 pip install injex
@@ -21,6 +22,8 @@ pip install injex
 
 - **Zero dependencies**: pure Python, easy to vendor, audit, and run anywhere.
 - **Typed constructor injection**: dependencies are resolved from annotations.
+- **Framework-agnostic**: use the same wiring in web apps, workers, CLIs, and
+  tests.
 - **Production lifetimes**: singleton, transient, and scoped services.
 - **Factories and instances**: use custom creation logic or prebuilt objects.
 - **Named registrations**: register multiple implementations of the same type.
@@ -28,6 +31,23 @@ pip install injex
 - **Test overrides**: swap real services for fakes in a small, explicit scope.
 - **Container validation**: catch missing annotations, missing registrations, and
   dependency cycles before your app starts.
+
+## Where it fits
+
+Injex is useful when manual wiring starts to spread across your entrypoints, but
+`providers`, global state, or a framework-specific container would be too much.
+
+Common patterns:
+
+- **Service layer**: wire repositories, gateways, clients, and use cases once at
+  startup.
+- **CLIs**: share configuration, API clients, and commands without module-level
+  singletons.
+- **Workers**: create one scope per job or message while reusing long-lived
+  clients.
+- **Tests**: override slow or external dependencies inside one `with` block.
+- **Clean architecture**: keep application code depending on interfaces instead
+  of framework-specific dependency hooks.
 
 ## Quick start
 
@@ -147,9 +167,12 @@ explicit while still covering common application wiring needs.
 
 ## Documentation and examples
 
+- [Docs site](https://vshulcz.github.io/injex/)
 - [Docs index](./docs/index.md)
 - [Tutorial](./docs/tutorial.md)
 - [Validation guide](./docs/validation.md)
+- [Why Injex](./docs/why-injex.md)
+- [Usage scenarios](./docs/usage-scenarios.md)
 - [API reference](./docs/api.md)
 - [Clean architecture example](./examples/clean_architecture.py)
 - [CLI application example](./examples/cli_app.py)

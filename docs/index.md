@@ -7,6 +7,10 @@ framework-sized dependency injection container.
 
 - [Tutorial](./tutorial.md): registrations, lifetimes, factories, overrides, and
   common patterns.
+- [Why Injex](./why-injex.md): positioning, trade-offs, and comparison with
+  common alternatives.
+- [Usage scenarios](./usage-scenarios.md): where Injex fits in services, CLIs,
+  workers, and tests.
 - [Container validation](./validation.md): check wiring before startup without
   creating service instances.
 - [API reference](./api.md): public methods, exceptions, and import surface.
