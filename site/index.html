@@ -67,11 +67,10 @@
       <section id="top" class="hero section">
         <div class="hero-copy">
           <p class="eyebrow">Zero dependencies · typed wiring · no framework lock-in</p>
-          <h1>Dependency injection that stays small.</h1>
+          <h1>Small typed dependency injection for Python.</h1>
           <p class="lead">
-            Injex wires Python services, CLIs, workers, and tests with normal type
-            hints, scoped lifetimes, test overrides, and graph validation before
-            startup.
+            Injex keeps application wiring explicit with normal type hints,
+            scoped lifetimes, test overrides, and graph validation before startup.
           </p>
           <div class="hero-badges" aria-label="Project strengths">
             <span class="badge">Python 3.10–3.13</span>
@@ -94,11 +93,11 @@
             <small>Pure Python package. No runtime dependencies.</small>
           </div>
           <div class="metric-card">
-            <strong>assert_valid()</strong>
+            <strong>Validate</strong>
             <span>Check the dependency graph before constructing services.</span>
           </div>
           <div class="metric-card">
-            <strong>override()</strong>
+            <strong>Override</strong>
             <span>Swap external dependencies in a precise test scope.</span>
           </div>
         </aside>
@@ -114,12 +113,12 @@
       <section id="why" class="section split">
         <div>
           <p class="eyebrow">Why it exists</p>
-          <h2>Manual wiring is great until it leaks everywhere.</h2>
+          <h2>Keep construction at the edge.</h2>
         </div>
         <div>
           <p>
-            Small Python apps often start with direct constructor calls. That is the
-            right default. Injex becomes useful when the same service graph is
+            Small Python apps often start with direct constructor calls. That is
+            the right default. Injex becomes useful when the same service graph is
             repeated across API startup, CLI commands, workers, and tests.
           </p>
           <p>
