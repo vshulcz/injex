@@ -11,6 +11,7 @@ framework-sized dependency injection container.
   creating service instances.
 - [API reference](./api.md): public methods, exceptions, and import surface.
 - [Release process](./releasing.md): maintainer checklist for versioned releases.
+- [Resolving multiple implementations](./resolve-all.md): use resolve_all() for handlers, plugins, and pipelines.
 
 ## Examples
 
