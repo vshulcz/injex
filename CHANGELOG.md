@@ -13,6 +13,8 @@ and this project uses semantic versioning.
   Open Graph metadata, and structured data.
 - Shareable article page explaining why a small Python DI container can be useful
   for services, CLIs, workers, tests, and clean architecture.
+- Favicon, PNG social preview card, 404 page, and FAQ structured data for the Python
+  dependency injection guide.
 
 ### Changed
 
@@ -25,6 +27,7 @@ and this project uses semantic versioning.
   improve discoverability for search and AI-assisted documentation tools.
 - Sitemap now contains only indexable HTML pages, with service files kept outside
   the sitemap.
+- Mobile navigation and social metadata were tightened across the static site.
 
 ## [1.2.1] - 2026-05-25
 

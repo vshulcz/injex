@@ -20,6 +20,11 @@
     />
     <meta property="og:type" content="article" />
     <meta property="og:url" content="https://vshulcz.github.io/injex/docs/python-dependency-injection.html" />
+    <meta property="og:image" content="https://vshulcz.github.io/injex/assets/og-card.png" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:image" content="https://vshulcz.github.io/injex/assets/og-card.png" />
+    <meta name="theme-color" content="#070a11" />
+    <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -28,6 +33,38 @@
         "description": "A practical guide to Python dependency injection, manual wiring, framework DI, and when a small typed DI container like Injex fits.",
         "author": {"@type": "Person", "name": "Vlad Shulcz"},
         "mainEntityOfPage": "https://vshulcz.github.io/injex/docs/python-dependency-injection.html"
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Do Python applications need dependency injection?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Small Python applications often do not need a DI container. Manual wiring is usually best until the same service graph is repeated across APIs, CLIs, workers, and tests."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "When should I use a Python DI container?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Use a Python DI container when object construction should live in one composition root, dependencies are expressed with type hints, tests need overrides, and startup should validate the dependency graph."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How is Injex different from a large provider framework?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Injex focuses on a small API: typed constructor injection, lifetimes, factories, named registrations, test overrides, and graph validation without runtime dependencies or a large provider DSL."
+            }
+          }
+        ]
       }
     </script>
     <link rel="stylesheet" href="../styles.css" />
@@ -110,10 +147,30 @@
           <li>Startup checks that call <code>assert_valid()</code> before serving traffic.</li>
         </ul>
 
+        <h2>Frequently asked questions</h2>
+        <h3>Do Python applications need dependency injection?</h3>
+        <p>
+          Not by default. Small Python programs are often clearer with manual
+          constructor calls. Dependency injection becomes useful when construction
+          logic repeats or when tests need controlled replacement of external services.
+        </p>
+        <h3>When should I use a Python DI container?</h3>
+        <p>
+          Use one when a shared service graph should live in one composition root,
+          dependencies are already expressed with type hints, and startup should
+          catch missing registrations before real work begins.
+        </p>
+        <h3>How is Injex different from a provider framework?</h3>
+        <p>
+          Injex avoids a large provider DSL. It focuses on typed constructor
+          injection, lifetimes, factories, named registrations, overrides, and
+          validation while staying zero-dependency.
+        </p>
+
         <p class="callout">
-          <strong>SEO note for readers:</strong> this page is intentionally practical,
-          not a benchmark. It explains when dependency injection in Python is useful
-          and when a container is unnecessary.
+          <strong>Practical rule:</strong> if manual wiring is clear, keep it. If the
+          same graph appears in several entrypoints, move wiring into one explicit
+          composition root.
         </p>
 
         <nav class="pager" aria-label="Next pages">

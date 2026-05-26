@@ -143,6 +143,7 @@ button:focus-visible {
   border-radius: 999px;
   color: var(--muted);
   font-size: 14px;
+  white-space: nowrap;
   text-decoration: none;
   transition:
     color 0.18s ease,
@@ -908,8 +909,11 @@ th {
   }
 
   .nav nav {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 2px;
     margin-top: 12px;
+    scrollbar-width: thin;
   }
 
   .hero {

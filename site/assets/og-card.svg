@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#070a11" />
+      <stop offset="0.55" stop-color="#101827" />
+      <stop offset="1" stop-color="#0b1020" />
+    </linearGradient>
+    <linearGradient id="a" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#67e8f9" />
+      <stop offset="1" stop-color="#a78bfa" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)" />
+  <circle cx="1040" cy="80" r="240" fill="#a78bfa" opacity="0.16" />
+  <circle cx="120" cy="540" r="280" fill="#67e8f9" opacity="0.13" />
+  <rect x="72" y="72" width="1056" height="486" rx="42" fill="#0f172a" opacity="0.82" stroke="#334155" />
+  <circle cx="132" cy="128" r="10" fill="url(#a)" />
+  <text x="156" y="137" fill="#f8fafc" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="800">Injex</text>
+  <text x="118" y="246" fill="#67e8f9" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="800" letter-spacing="3">TINY TYPED DI FOR PYTHON</text>
+  <text x="118" y="342" fill="#f8fafc" font-family="Inter, Arial, sans-serif" font-size="72" font-weight="900">Dependency injection</text>
+  <text x="118" y="426" fill="#f8fafc" font-family="Inter, Arial, sans-serif" font-size="72" font-weight="900">that stays small.</text>
+  <text x="118" y="492" fill="#cbd5e1" font-family="Inter, Arial, sans-serif" font-size="30">Zero dependencies · typed wiring · scopes · overrides · validation</text>
+</svg>
