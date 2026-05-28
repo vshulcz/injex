@@ -34,6 +34,9 @@ jobs:
         with:
           python-version: "3.13"
 
+      - name: Clean previous build outputs
+        run: rm -rf dist build *.egg-info
+
       - name: Build distributions
         run: uv build
 
@@ -57,13 +60,17 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: injex-dist
-          path: dist/*
+          path: |
+            dist/*.whl
+            dist/*.tar.gz
 
       - name: Attach artifacts to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
           fail_on_unmatched_files: true
 
       - name: Publish to PyPI
