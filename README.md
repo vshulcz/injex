@@ -191,6 +191,7 @@ explicit while still covering common application wiring needs.
 - [Comparison guide](./docs/comparison.md)
 - [Usage scenarios](./docs/usage-scenarios.md)
 - [API reference](./docs/api.md)
+- [Article: When Python manual wiring turns into copy-paste architecture](https://vshulcz.hashnode.dev/when-python-manual-wiring-turns-into-copy-paste-architecture)
 - [Clean architecture example](./examples/clean_architecture.py)
 - [CLI application example](./examples/cli_app.py)
 - [FastAPI application service example](./examples/fastapi_app.py)
