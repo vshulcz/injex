@@ -9,10 +9,10 @@ and this project uses semantic versioning.
 
 ### Added
 
-- SEO-focused documentation site pages with canonical URLs, sitemap, robots.txt,
+- Documentation site pages with canonical URLs, sitemap, robots.txt,
   Open Graph metadata, and structured data.
-- Shareable article page explaining why a small Python DI container can be useful
-  for services, CLIs, workers, tests, and clean architecture.
+- Article page explaining why a small Python DI container can be useful for
+  services, CLIs, workers, tests, and clean architecture.
 - Favicon, PNG social preview card, 404 page, and FAQ structured data for the Python
   dependency injection guide.
 
@@ -23,8 +23,8 @@ and this project uses semantic versioning.
 - Landing page and documentation pages now use a more polished visual system,
   improved navigation, responsive cards, focus states, and reduced-motion-safe
   CSS animations.
-- Added a keyword-focused Python dependency injection guide and `llms.txt` to
-  improve discoverability for search and AI-assisted documentation tools.
+- Added a Python dependency injection guide for readers comparing manual wiring,
+  framework DI, and small containers.
 - Sitemap now contains only indexable HTML pages, with service files kept outside
   the sitemap.
 - Mobile navigation and social metadata were tightened across the static site.
@@ -37,7 +37,7 @@ and this project uses semantic versioning.
 - Release checklist for maintainers.
 - CODEOWNERS and issue template chooser configuration.
 - GitHub Pages-ready docs site.
-- Positioning guide, usage scenarios, and launch copy for external distribution.
+- Positioning guide, usage scenarios, and project overview copy.
 - Comparison guide for choosing between manual wiring, framework dependencies,
   Injex, and larger DI containers.
 

@@ -727,7 +727,7 @@ pre code {
   color: var(--text);
 }
 
-.seo-section {
+.topic-section {
   margin-top: 26px;
   padding: clamp(28px, 5vw, 56px);
   border: 1px solid var(--line);
@@ -738,7 +738,7 @@ pre code {
   box-shadow: var(--shadow);
 }
 
-.seo-section p {
+.topic-section p {
   max-width: 900px;
 }
 

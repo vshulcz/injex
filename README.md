@@ -4,7 +4,7 @@
 [![pypi](https://img.shields.io/pypi/v/injex.svg)](https://pypi.python.org/pypi/injex)
 [![Docs](https://img.shields.io/badge/docs-vshulcz.github.io%2Finjex-blue)](https://vshulcz.github.io/injex/)
 [![Coverage](https://codecov.io/gh/vshulcz/injex/branch/main/graph/badge.svg)](https://codecov.io/gh/vshulcz/injex)
-[![Python Versions](https://img.shields.io/badge/python-3.10%20|%203.11%20|%203.12%20|%203.13-blue)](https://github.com/vshulcz/injex)
+[![Python Versions](https://img.shields.io/badge/python-3.10%20|%203.11%20|%203.12%20|%203.13%20|%203.14-blue)](https://github.com/vshulcz/injex)
 [![License](https://img.shields.io/github/license/vshulcz/injex.svg)](https://github.com/vshulcz/injex/blob/main/LICENSE)
 
 Tiny typed dependency injection for Python apps that want explicit wiring without
