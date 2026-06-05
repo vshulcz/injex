@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Injex recipes — FastAPI, workers, CLI wiring</title>
+    <meta
+      name="description"
+      content="Practical Injex recipes for FastAPI composition roots, worker job scopes, CLI command wiring, and test overrides."
+    />
+    <link rel="canonical" href="https://vshulcz.github.io/injex/docs/recipes.html" />
+    <meta name="theme-color" content="#070a11" />
+    <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />
+    <meta property="og:title" content="Injex application wiring recipes" />
+    <meta property="og:description" content="FastAPI, worker, CLI, and test override recipes for Injex." />
+    <meta property="og:image" content="https://vshulcz.github.io/injex/assets/og-card.png" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="docs-page">
+    <a class="skip-link" href="#content">Skip to content</a>
+    <header class="nav">
+      <a class="brand" href="../">Injex</a>
+      <nav aria-label="Primary navigation">
+        <a href="../">Home</a>
+        <a class="active" href="./">Docs</a>
+        <a href="./comparison.html">Compare</a>
+        <a href="https://github.com/vshulcz/injex">GitHub</a>
+      </nav>
+    </header>
+    <main id="content" class="docs-shell">
+      <aside class="docs-sidebar" aria-label="Documentation navigation">
+        <p class="sidebar-title">Documentation</p>
+        <a href="./">Overview</a>
+        <a href="./getting-started.html">Getting started</a>
+        <a href="./validation.html">Validation</a>
+        <a href="./comparison.html">Comparison</a>
+        <a class="active" href="./recipes.html">Recipes</a>
+        <a href="./why.html">Why Injex</a>
+        <a href="./usage.html">Usage scenarios</a>
+        <a href="./python-dependency-injection.html">Python DI guide</a>
+        <a href="./api.html">API reference</a>
+      </aside>
+      <article class="docs-content">
+        <p class="eyebrow">Recipes</p>
+        <h1>Keep container calls at application boundaries.</h1>
+        <p class="lead">
+          These recipes show where Injex belongs in common Python application
+          shapes. The examples are small because the boundary is the important
+          part: build the graph at startup, resolve use cases at entrypoints,
+          and keep domain code unaware of the container.
+        </p>
+
+        <h2>FastAPI composition root</h2>
+        <p>
+          Build the container during application startup. FastAPI dependencies
+          can create a scope and resolve use cases for handlers.
+        </p>
+        <pre><code>from fastapi import Depends, FastAPI
+from injex import Container, Scope
+
+container = Container()
+container.add_scoped(UserRepository)
+container.add_transient(RegisterUser)
+container.assert_valid()
+
+app = FastAPI()
+
+def get_scope() -&gt; Scope:
+    return container.create_scope()
+
+def get_register_user(scope: Scope = Depends(get_scope)) -&gt; RegisterUser:
+    return scope.resolve(RegisterUser)
+
+@app.post("/users")
+def create_user(use_case: RegisterUser = Depends(get_register_user)):
+    return use_case.execute()</code></pre>
+        <p>
+          Register request-owned objects as scoped services. Keep long-lived
+          clients as singletons.
+        </p>
+
+        <h2>Worker job scope</h2>
+        <p>
+          Keep process-level clients outside the job loop, then create a job
+          container and one scope per message.
+        </p>
+        <pre><code>queue_client = QueueClient()
+
+def build_job_container(job_id: str) -&gt; Container:
+    container = Container()
+    container.add_instance(QueueClient, queue_client)
+    container.add_instance(JobContext, JobContext(job_id))
+    container.add_scoped(JobScratchpad)
+    container.add_transient(ImportUserJob)
+    container.assert_valid()
+    return container
+
+def handle_job(job_id: str) -&gt; None:
+    scope = build_job_container(job_id).create_scope()
+    scope.resolve(ImportUserJob).run()</code></pre>
+        <p>
+          Do not reuse scoped state between jobs. For concurrent jobs, keep
+          job-specific values in the per-job container or pass them as method
+          arguments.
+        </p>
+
+        <h2>CLI command wiring</h2>
+        <p>
+          Let the CLI parse arguments, build settings, resolve a command object,
+          and run it. Keep clients and services out of module-level globals.
+        </p>
+        <pre><code>def build_container(settings: Settings) -&gt; Container:
+    container = Container()
+    container.add_instance(Settings, settings)
+    container.add_singleton(ApiClient)
+    container.add_transient(SyncUsersCommand)
+    container.assert_valid()
+    return container
+
+def main() -&gt; None:
+    settings = Settings(api_url="https://api.example.com")
+    container = build_container(settings)
+    container.resolve(SyncUsersCommand).run()</code></pre>
+
+        <h2>Test override boundary</h2>
+        <p>
+          Replace dependencies around the smallest block that needs the fake.
+          The original registration is restored when the block exits.
+        </p>
+        <pre><code>fake_client = FakeApiClient()
+
+with container.override(ApiClient, instance=fake_client):
+    command = container.resolve(SyncUsersCommand)
+    command.run()</code></pre>
+
+        <nav class="pager" aria-label="Next pages">
+          <a href="./comparison.html"><small>Previous</small>Comparison</a>
+          <a href="./api.html"><small>Reference</small>API reference</a>
+        </nav>
+      </article>
+    </main>
+    <footer class="site-footer"><span>Injex docs</span><span><a href="../">Home</a> · <a href="https://github.com/vshulcz/injex">GitHub</a></span></footer>
+  </body>
+</html>

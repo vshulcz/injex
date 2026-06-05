@@ -10,16 +10,52 @@
 Tiny typed dependency injection for Python apps that want explicit wiring without
 a framework-sized container.
 
-Injex keeps constructor injection boring: normal type hints, zero runtime
-dependencies, scoped lifetimes, test overrides, and graph validation before your
-app starts. It is designed for services, CLIs, workers, and clean architecture
-code that should stay framework-agnostic.
+Injex is for the point where manual constructor calls are still readable in one
+place, but start repeating across an API, a worker, a CLI, and tests. It keeps
+wiring explicit: normal type hints, zero runtime dependencies, scoped lifetimes,
+test overrides, and graph validation before your app starts.
 
 ```bash
 pip install injex
 ```
 
 Website: [vshulcz.github.io/injex](https://vshulcz.github.io/injex/)
+
+## The problem it solves
+
+Without a composition root, the same object graph often leaks into every
+entrypoint:
+
+```python
+repo = UserRepository(settings.database_url)
+mailer = EmailSender(settings.smtp_url)
+use_case = RegisterUser(repo, mailer)
+```
+
+That is fine once. It becomes harder to maintain when the API, background jobs,
+CLI commands, and tests all need the same graph with small differences.
+
+With Injex, application code keeps normal constructors and startup code owns the
+wiring:
+
+```python
+container = Container()
+container.add_instance(Settings, settings)
+container.add_singleton(UserRepository)
+container.add_singleton(EmailSender)
+container.add_transient(RegisterUser)
+
+container.assert_valid()
+
+use_case = container.resolve(RegisterUser)
+```
+
+Tests can replace one dependency without changing production registrations:
+
+```python
+with container.override(EmailSender, instance=fake_mailer):
+    use_case = container.resolve(RegisterUser)
+```
 
 ## Use Injex when
 
@@ -189,6 +225,7 @@ explicit while still covering common application wiring needs.
 - [Validation guide](./docs/validation.md)
 - [Why Injex](./docs/why-injex.md)
 - [Comparison guide](./docs/comparison.md)
+- [Recipes](./docs/recipes.md)
 - [Usage scenarios](./docs/usage-scenarios.md)
 - [API reference](./docs/api.md)
 - [Article: When Python manual wiring turns into copy-paste architecture](https://vshulcz.hashnode.dev/when-python-manual-wiring-turns-into-copy-paste-architecture)

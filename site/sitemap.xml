@@ -31,6 +31,12 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://vshulcz.github.io/injex/docs/recipes.html</loc>
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://vshulcz.github.io/injex/docs/why.html</loc>
     <lastmod>2026-05-26</lastmod>
     <changefreq>monthly</changefreq>
