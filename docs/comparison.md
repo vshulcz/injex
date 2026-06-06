@@ -1,6 +1,7 @@
 # Comparison guide
 
-This guide explains where Injex fits. It is not a benchmark.
+This guide explains where Injex fits. For hot-path resolve timings, see the
+[performance notes](./performance.md).
 
 ## Quick decision table
 
@@ -12,6 +13,7 @@ This guide explains where Injex fits. It is not a benchmark.
 | Typed constructor injection without a provider DSL | Injex |
 | Temporary dependency replacement in tests | Injex |
 | Graph validation before startup without building services | Injex |
+| Fast repeated resolves for small explicit graphs | Injex |
 | Complex provider/configuration framework | Larger DI container |
 
 ## Manual wiring

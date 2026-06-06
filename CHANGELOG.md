@@ -7,17 +7,30 @@ and this project uses semantic versioning.
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-06-06
+
 ### Added
 
+- Reproducible dependency-resolution benchmark script for comparing Injex with
+  manual wiring, Wireup, dependency-injector, lagom, and punq.
+- Performance documentation explaining the benchmark shape, environment, and
+  interpretation.
+- Regression tests for fast-path resolution, cached plans, fallback behavior,
+  overrides, optional dependencies, and unhashable factories.
 - Documentation site pages with canonical URLs, sitemap, robots.txt,
   Open Graph metadata, and structured data.
 - Article page explaining why a small Python DI container can be useful for
   services, CLIs, workers, tests, and clean architecture.
-- Favicon, PNG social preview card, 404 page, and FAQ structured data for the Python
-  dependency injection guide.
+- Favicon, PNG social preview card, 404 page, and FAQ structured data for the
+  Python dependency injection guide.
 
 ### Changed
 
+- Resolution now caches dependency plans and uses a fast path for common
+  constructor-injection graphs.
+- Internal implementation was split into focused modules for errors, planning,
+  registry, and container runtime logic.
+- Test coverage was raised to 96%.
 - Public website now links to local documentation pages instead of only GitHub
   Markdown files.
 - Landing page and documentation pages now use a more polished visual system,
@@ -28,6 +41,11 @@ and this project uses semantic versioning.
 - Sitemap now contains only indexable HTML pages, with service files kept outside
   the sitemap.
 - Mobile navigation and social metadata were tightened across the static site.
+
+### Fixed
+
+- Fast-path resolution now preserves cycle detection, override invalidation,
+  optional injected properties, and unhashable callable factory support.
 
 ## [1.2.1] - 2026-05-25
 

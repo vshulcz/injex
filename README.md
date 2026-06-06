@@ -83,6 +83,37 @@ with container.override(EmailSender, instance=fake_mailer):
 - **Test overrides**: swap real services for fakes in a small, explicit scope.
 - **Container validation**: catch missing annotations, missing registrations, and
   dependency cycles before your app starts.
+- **Fast hot-path resolution**: cached dependency plans keep repeated resolves
+  close to manual wiring for small service graphs.
+
+## Performance snapshot
+
+Injex 1.3.0 compiles and caches simple dependency plans, then uses a fast path
+for common constructor-injection graphs. In a small synthetic graph with a
+singleton `Settings`, singleton `ApiClient`, and transient repository/service
+objects, Injex resolves faster than several popular Python DI containers on this
+machine.
+
+| Library | Median resolve time |
+| --- | ---: |
+| manual wiring | `0.265 µs/op` |
+| Injex | `0.818 µs/op` |
+| Wireup, same scope | `0.879 µs/op` |
+| Wireup, scope per operation | `1.559 µs/op` |
+| dependency-injector | `1.727 µs/op` |
+| lagom | `9.794 µs/op` |
+| punq | `56.795 µs/op` |
+
+Benchmarks are synthetic and not a universal ranking. They are included to show
+the approximate overhead of Injex in its target shape: small explicit service
+graphs reused by APIs, workers, CLIs, and tests.
+
+Reproduce locally:
+
+```bash
+uv run --with punq --with lagom --with dependency-injector --with wireup \
+  python benchmarks/resolve_graph.py
+```
 
 ## Where it fits
 
@@ -225,6 +256,7 @@ explicit while still covering common application wiring needs.
 - [Validation guide](./docs/validation.md)
 - [Why Injex](./docs/why-injex.md)
 - [Comparison guide](./docs/comparison.md)
+- [Performance notes](./docs/performance.md)
 - [Recipes](./docs/recipes.md)
 - [Usage scenarios](./docs/usage-scenarios.md)
 - [API reference](./docs/api.md)

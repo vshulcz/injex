@@ -15,7 +15,8 @@ Injex is intentionally small:
 - no provider DSL;
 - no required decorators for constructor injection;
 - no framework lock-in;
-- normal Python type hints as the wiring contract.
+- normal Python type hints as the wiring contract;
+- cached resolution plans for fast repeated resolves.
 
 The goal is not to replace every Python DI library. The goal is to cover the
 boring 80% for services, CLIs, workers, and clean architecture applications.
@@ -63,6 +64,8 @@ Choose Injex when you want:
 - scoped/singleton/transient lifetimes;
 - temporary test overrides;
 - dependency graph validation without constructing service instances.
+- low overhead for the common path: singleton infrastructure plus transient
+  application services.
 
 Choose a larger container when you need a rich provider DSL, configuration
 framework, or many built-in integrations.

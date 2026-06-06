@@ -1123,6 +1123,63 @@ class TestContainer(unittest.TestCase):
         self.assertEqual(len(context.exception.errors), 1)
         self.assertIn("Container validation failed", str(context.exception))
 
+    def test_override_invalidates_cached_resolution_plan(self):
+        class Service:
+            value = "real"
+
+        class FakeService:
+            value = "fake"
+
+        class Consumer:
+            def __init__(self, service: Service):
+                self.service = service
+
+        self.container.add_transient(Service)
+        self.container.add_transient(Consumer)
+
+        self.assertEqual(self.container.resolve(Consumer).service.value, "real")
+
+        with self.container.override(Service, FakeService):
+            self.assertEqual(self.container.resolve(Consumer).service.value, "fake")
+
+        self.assertEqual(self.container.resolve(Consumer).service.value, "real")
+
+    def test_unhashable_callable_factory_resolves(self):
+        class Service: ...
+
+        class Factory:
+            def __eq__(self, other):
+                return isinstance(other, Factory)
+
+            def __call__(self) -> Service:
+                return Service()
+
+        self.container.add_transient_factory(Service, Factory())
+
+        self.assertIsInstance(self.container.resolve(Service), Service)
+
+    def test_optional_injected_property_defaults_to_none(self):
+        class Cache: ...
+
+        class Service:
+            @inject
+            @abstractmethod
+            def cache(self) -> Optional[Cache]: ...
+
+        self.container.add_transient(Service)
+
+        self.assertIsNone(self.container.resolve(Service).cache)
+
+    def test_reentrant_container_resolution_detects_cycle(self):
+        class Service:
+            def __init__(self, container):
+                container.resolve(Service)
+
+        self.container.add_transient(Service)
+
+        with self.assertRaises(CyclicDependencyException):
+            self.container.resolve(Service)
+
     def test_public_api_all_exports_core_symbols(self):
         expected = {
             "Container",

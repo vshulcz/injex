@@ -11,6 +11,8 @@ framework-sized dependency injection container.
   common alternatives.
 - [Comparison guide](./comparison.md): when to choose Injex, manual wiring,
   framework dependencies, or a larger DI container.
+- [Performance notes](./performance.md): benchmark shape, results, and how to
+  reproduce the hot-path resolve comparison.
 - [Recipes](./recipes.md): FastAPI composition root, worker job scope, CLI
   command wiring, and test override boundaries.
 - [Usage scenarios](./usage-scenarios.md): where Injex fits in services, CLIs,
