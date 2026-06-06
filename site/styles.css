@@ -177,6 +177,7 @@ button:focus-visible {
 .hero-panel,
 .strip,
 .split,
+.benchmark-showcase,
 .cards article,
 .code-section,
 .comparison,
@@ -196,6 +197,7 @@ button:focus-visible {
 .hero-panel,
 .strip,
 .split,
+.benchmark-showcase,
 .cards article,
 .code-section,
 .comparison,
@@ -543,6 +545,100 @@ pre code {
   padding: clamp(28px, 5vw, 56px);
 }
 
+.benchmark-showcase {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(360px, 1.1fr);
+  gap: 22px;
+  margin-top: 26px;
+  padding: clamp(28px, 5vw, 54px);
+}
+
+.benchmark-copy p {
+  color: var(--muted);
+  line-height: 1.85;
+}
+
+.benchmark-copy strong {
+  color: var(--text);
+}
+
+.benchmark-panel {
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(117, 214, 179, 0.14), transparent 18rem),
+    rgba(6, 10, 16, 0.66);
+}
+
+.benchmark-leader {
+  display: grid;
+  gap: 4px;
+  padding: 20px;
+  border: 1px solid rgba(117, 214, 179, 0.24);
+  border-radius: 20px;
+  background: rgba(117, 214, 179, 0.08);
+}
+
+.benchmark-leader span,
+.benchmark-leader small,
+.benchmark-panel p {
+  color: var(--muted);
+}
+
+.benchmark-leader strong {
+  color: var(--accent-3);
+  font-size: clamp(32px, 5vw, 54px);
+  line-height: 1;
+  letter-spacing: -0.06em;
+}
+
+.benchmark-bars {
+  display: grid;
+  gap: 11px;
+}
+
+.benchmark-bars div {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  overflow: hidden;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(10, 15, 23, 0.62);
+}
+
+.benchmark-bars div::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--bar);
+  content: "";
+  background: rgba(139, 211, 221, 0.08);
+}
+
+.benchmark-bars div.accent::before {
+  background: rgba(117, 214, 179, 0.18);
+}
+
+.benchmark-bars span,
+.benchmark-bars strong {
+  position: relative;
+}
+
+.benchmark-bars span {
+  color: var(--muted);
+}
+
+.benchmark-bars strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
 .decision {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -868,6 +964,7 @@ th {
 .strip,
 .split,
 .cards,
+.benchmark-showcase,
 .code-section,
 .comparison,
 .decision,
@@ -898,6 +995,7 @@ th {
   .split,
   .code-section,
   .decision,
+  .benchmark-showcase,
   .docs-shell {
     grid-template-columns: 1fr;
   }

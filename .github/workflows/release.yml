@@ -7,6 +7,15 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      publish-to-pypi:
+        description: "Publish built distributions to PyPI"
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
 
 permissions:
   contents: write
@@ -74,5 +83,5 @@ jobs:
           fail_on_unmatched_files: true
 
       - name: Publish to PyPI
-        if: github.event_name == 'release'
+        if: github.event_name == 'release' || inputs.publish-to-pypi == 'true'
         uses: pypa/gh-action-pypi-publish@release/v1

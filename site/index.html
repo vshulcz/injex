@@ -56,6 +56,7 @@
       <a class="brand" href="#top">Injex</a>
       <nav aria-label="Primary navigation">
         <a href="#why">Why</a>
+        <a href="#performance">Performance</a>
         <a href="#fit">Use cases</a>
         <a href="#code">Example</a>
         <a href="./docs/">Docs</a>
@@ -121,6 +122,44 @@
         <div><strong>3</strong><span>lifetimes: singleton, transient, scoped</span></div>
         <div><strong>0.818 µs</strong><span>median resolve benchmark</span></div>
         <div><strong>typed</strong><span>constructor injection from annotations</span></div>
+      </section>
+
+      <section id="performance" class="section benchmark-showcase">
+        <div class="benchmark-copy">
+          <p class="eyebrow">Performance</p>
+          <h2>Small container. Fast hot path.</h2>
+          <p>
+            Injex 1.3.0 caches dependency plans and uses a fast resolve path for
+            the common service-layer graph: singleton infrastructure plus
+            transient application services.
+          </p>
+          <p>
+            On this synthetic benchmark, Injex resolves the graph in
+            <strong>0.818 µs/op</strong>, ahead of Wireup same-scope on the same
+            machine while staying zero-dependency and explicit.
+          </p>
+          <div class="actions">
+            <a href="./docs/performance.html">Read performance notes</a>
+            <a href="https://github.com/vshulcz/injex/blob/main/benchmarks/resolve_graph.py">Benchmark source</a>
+          </div>
+        </div>
+        <div class="benchmark-panel" aria-label="Resolve benchmark results">
+          <div class="benchmark-leader">
+            <span>Injex</span>
+            <strong>0.818 µs/op</strong>
+            <small>median resolve time</small>
+          </div>
+          <div class="benchmark-bars">
+            <div style="--bar: 30%"><span>manual</span><strong>0.265</strong></div>
+            <div class="accent" style="--bar: 93%"><span>Injex</span><strong>0.818</strong></div>
+            <div style="--bar: 100%"><span>Wireup same scope</span><strong>0.879</strong></div>
+            <div style="--bar: 100%"><span>Wireup scope/op</span><strong>1.559</strong></div>
+            <div style="--bar: 100%"><span>dependency-injector</span><strong>1.727</strong></div>
+          </div>
+          <p>
+            Median µs/op. Smaller is better. Synthetic graph; measure your own app.
+          </p>
+        </div>
       </section>
 
       <section id="why" class="section split">
