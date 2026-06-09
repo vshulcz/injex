@@ -37,6 +37,14 @@ framework-sized dependency injection container.
 - [Factories](../examples/factory.py)
 - [Named registrations](../examples/named.py)
 
+## Articles and launch notes
+
+- [When Python manual wiring turns into copy-paste architecture](https://vshulcz.hashnode.dev/when-python-manual-wiring-turns-into-copy-paste-architecture)
+- [Where should dependency wiring live in a Python app?](https://vshulcz.hashnode.dev/where-should-dependency-wiring-live-in-a-python-app)
+- [Fast dependency injection in Python without a provider framework](https://dev.to/vshulcz/fast-dependency-injection-in-python-without-a-provider-framework-3dko)
+- [Injex 1.3.0 launch post on X](https://x.com/vshulcz_dev/status/2064249921570533567?s=20)
+- [Injex project thread on X](https://x.com/vshulcz_dev/status/2059720295536009683?s=20)
+
 ## Project notes
 
 - [Roadmap](../ROADMAP.md)
