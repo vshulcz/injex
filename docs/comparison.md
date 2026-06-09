@@ -57,6 +57,19 @@ Choose a larger container when:
 Choose Injex when the main needs are constructor injection, lifetimes, factories,
 test overrides, named registrations, and validation.
 
+For a more detailed framework comparison, see
+[`di-frameworks.md`](./di-frameworks.md).
+
+## FastAPI Depends
+
+FastAPI `Depends` is best treated as an HTTP boundary adapter. It is excellent
+for request-specific work and for exposing app state to handlers. It is not the
+only composition root when the same service graph is also used by workers, CLIs,
+and tests.
+
+For a concrete boundary pattern, see
+[`fastapi-depends.md`](./fastapi-depends.md).
+
 ## Why graph validation matters
 
 Runtime dependency errors are expensive when they happen on the first real

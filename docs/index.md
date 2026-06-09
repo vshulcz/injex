@@ -11,6 +11,10 @@ framework-sized dependency injection container.
   common alternatives.
 - [Comparison guide](./comparison.md): when to choose Injex, manual wiring,
   framework dependencies, or a larger DI container.
+- [Compared to FastAPI Depends](./fastapi-depends.md): keep `Depends` at the HTTP
+  edge while sharing application wiring with workers and CLIs.
+- [Compared to larger DI frameworks](./di-frameworks.md): choose between Injex,
+  manual wiring, Wireup, Dishka, and dependency-injector.
 - [Performance notes](./performance.md): benchmark shape, results, and how to
   reproduce the hot-path resolve comparison.
 - [Recipes](./recipes.md): FastAPI composition root, worker job scope, CLI
@@ -27,6 +31,7 @@ framework-sized dependency injection container.
 
 - [Clean architecture](../examples/clean_architecture.py)
 - [CLI application](../examples/cli_app.py)
+- [FastAPI lifespan](../examples/fastapi_lifespan.py)
 - [Testing overrides](../examples/testing.py)
 - [Scoped services](../examples/scoped.py)
 - [Factories](../examples/factory.py)

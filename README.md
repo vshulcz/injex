@@ -256,6 +256,8 @@ explicit while still covering common application wiring needs.
 - [Validation guide](./docs/validation.md)
 - [Why Injex](./docs/why-injex.md)
 - [Comparison guide](./docs/comparison.md)
+- [Compared to FastAPI Depends](./docs/fastapi-depends.md)
+- [Compared to larger DI frameworks](./docs/di-frameworks.md)
 - [Performance notes](./docs/performance.md)
 - [Recipes](./docs/recipes.md)
 - [Usage scenarios](./docs/usage-scenarios.md)
@@ -264,10 +266,12 @@ explicit while still covering common application wiring needs.
 - [Clean architecture example](./examples/clean_architecture.py)
 - [CLI application example](./examples/cli_app.py)
 - [FastAPI application service example](./examples/fastapi_app.py)
+- [FastAPI lifespan composition root example](./examples/fastapi_lifespan.py)
 - [Testing overrides example](./examples/testing.py)
 - [Scoped lifetime example](./examples/scoped.py)
 - [Factories example](./examples/factory.py)
 - [Named registrations example](./examples/named.py)
+- [Benchmark source and notes](./benchmarks/README.md)
 
 ## API at a glance
 

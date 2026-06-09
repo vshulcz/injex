@@ -56,6 +56,8 @@ uv run --with punq --with lagom --with dependency-injector --with wireup \
 The benchmark prints Python/package versions, the graph shape, median time, min
 and max samples, and relative overhead compared with manual wiring.
 
+See also: [`benchmarks/README.md`](../benchmarks/README.md).
+
 ## What this means
 
 The result supports Injex's niche: explicit typed wiring can stay small while
