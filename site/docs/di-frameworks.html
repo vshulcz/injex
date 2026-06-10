@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Injex compared to Python DI frameworks</title>
+    <meta
+      name="description"
+      content="When to choose Injex, manual wiring, dependency-injector, Wireup, Dishka, or larger Python dependency injection frameworks."
+    />
+    <link rel="canonical" href="https://vshulcz.github.io/injex/docs/di-frameworks.html" />
+    <meta name="theme-color" content="#070a11" />
+    <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />
+    <meta property="og:title" content="Injex compared to Python DI frameworks" />
+    <meta property="og:description" content="Manual wiring, Injex, Wireup, Dishka, dependency-injector, and trade-offs." />
+    <meta property="og:image" content="https://vshulcz.github.io/injex/assets/performance-card.svg" />
+    <link rel="stylesheet" href="../styles.css" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": "Injex compared to Python DI frameworks",
+        "description": "When to choose Injex, manual wiring, dependency-injector, Wireup, Dishka, or larger Python dependency injection frameworks.",
+        "author": {"@type": "Person", "name": "vshulcz", "url": "https://github.com/vshulcz"},
+        "mainEntityOfPage": "https://vshulcz.github.io/injex/docs/di-frameworks.html"
+      }
+    </script>
+  </head>
+  <body class="docs-page">
+    <a class="skip-link" href="#content">Skip to content</a>
+    <header class="nav">
+      <a class="brand" href="../">Injex</a>
+      <nav aria-label="Primary navigation">
+        <a href="../">Home</a>
+        <a class="active" href="./">Docs</a>
+        <a href="./comparison.html">Compare</a>
+        <a href="https://github.com/vshulcz/injex">GitHub</a>
+      </nav>
+    </header>
+    <main id="content" class="docs-shell">
+      <aside class="docs-sidebar" aria-label="Documentation navigation">
+        <p class="sidebar-title">Documentation</p>
+        <a href="./">Overview</a>
+        <a href="./getting-started.html">Getting started</a>
+        <a href="./validation.html">Validation</a>
+        <a href="./comparison.html">Comparison</a>
+        <a href="./performance.html">Performance</a>
+        <a href="./fastapi-depends.html">FastAPI boundary</a>
+        <a class="active" href="./di-frameworks.html">DI frameworks</a>
+        <a href="./recipes.html">Recipes</a>
+        <a href="./api.html">API reference</a>
+      </aside>
+      <article class="docs-content">
+        <p class="eyebrow">Framework comparison</p>
+        <h1>Choose the smallest wiring tool that fits.</h1>
+        <p class="lead">
+          Injex is intentionally small. It is not trying to replace every Python
+          DI framework. It fits the middle ground between manual wiring and a
+          large provider framework.
+        </p>
+
+        <h2>Use Injex when you want</h2>
+        <ul>
+          <li>explicit registrations;</li>
+          <li>constructor injection from type hints;</li>
+          <li>singleton, transient, and scoped lifetimes;</li>
+          <li>temporary test overrides;</li>
+          <li>startup graph validation;</li>
+          <li>zero runtime dependencies;</li>
+          <li>low overhead for repeated resolves in small service graphs.</li>
+        </ul>
+
+        <h2>Use a larger DI framework when you want</h2>
+        <ul>
+          <li>a provider DSL as a first-class architecture tool;</li>
+          <li>advanced configuration injection;</li>
+          <li>framework integrations that own handler/task wiring;</li>
+          <li>async resource orchestration built into the container;</li>
+          <li>a broad ecosystem of container-specific features.</li>
+        </ul>
+
+        <h2>Dependency Injector</h2>
+        <p>
+          <code>dependency-injector</code> is mature and feature-rich. It is a strong
+          fit when provider objects, configuration providers, and explicit
+          container classes are part of the application architecture.
+        </p>
+        <p>
+          Injex is a better fit when the desired API is smaller: register normal
+          classes, validate the graph, resolve services, and keep constructors plain.
+        </p>
+
+        <h2>Wireup and Dishka</h2>
+        <p>
+          Wireup and Dishka focus on modern autowiring and framework integration.
+          They can be a good choice when the container should participate directly
+          in FastAPI or task framework scopes.
+        </p>
+        <p>
+          Injex keeps the boundary more conservative: build the app graph at the
+          composition root, then let FastAPI, Typer, and workers adapt that graph
+          at their edge.
+        </p>
+
+        <h2>Manual wiring</h2>
+        <p>
+          Manual wiring remains the best default for small apps. Move to Injex
+          only when the same graph starts repeating across API startup, CLI
+          commands, workers, and tests.
+        </p>
+
+        <p class="callout">
+          Benchmarks in Injex docs are graph-specific sanity checks, not universal
+          DI rankings.
+        </p>
+
+        <nav class="pager" aria-label="Next pages">
+          <a href="./fastapi-depends.html"><small>Boundary</small>FastAPI Depends comparison</a>
+          <a href="./performance.html"><small>Benchmark</small>Performance notes</a>
+        </nav>
+      </article>
+    </main>
+    <footer class="site-footer">
+      <span>Injex documentation</span>
+      <span><a href="../">Home</a> · <a href="https://github.com/vshulcz/injex">GitHub</a></span>
+    </footer>
+  </body>
+</html>

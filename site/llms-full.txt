@@ -1,0 +1,148 @@
+# Injex full AI context
+
+Injex is a tiny typed dependency injection container for Python applications.
+Its core goal is explicit, framework-independent application wiring without a
+large provider framework.
+
+## What Injex is
+
+Injex provides a small `Container` API for registering and resolving Python
+services from type hints. Application classes stay plain: constructors describe
+dependencies, and the composition root owns registration.
+
+```python
+from injex import Container
+
+container = Container()
+container.add_instance(Settings, settings)
+container.add_singleton(ApiClient)
+container.add_transient(UserRepository)
+container.add_transient(RegisterUser)
+container.assert_valid()
+
+use_case = container.resolve(RegisterUser)
+```
+
+## Core features
+
+- Zero runtime dependencies.
+- Python 3.10, 3.11, 3.12, 3.13, and 3.14 support.
+- PEP 561 typed package.
+- Constructor injection from Python type hints.
+- Singleton, transient, and scoped lifetimes.
+- Factories and prebuilt instances.
+- Named registrations.
+- Optional dependencies.
+- Temporary test overrides.
+- Graph validation before startup.
+- Cycle detection.
+- Cached dependency plans and fast repeated resolves.
+
+## Target use cases
+
+Injex fits Python apps where one service graph is reused by multiple entrypoints:
+
+- FastAPI application startup and request handlers.
+- Typer commands.
+- Background workers and consumers.
+- Local scripts.
+- Unit and integration tests.
+- Clean architecture / service-layer code.
+
+The rule of thumb: framework adapters own I/O boundaries; the application owns
+service wiring.
+
+## FastAPI boundary
+
+FastAPI `Depends` is useful at the HTTP/request boundary. It should adapt request
+objects, authentication, app state, and request-specific concerns. If the same
+service graph is used outside HTTP, the graph should be built by plain Python or
+an external composition-root helper.
+
+Recommended shape:
+
+```python
+def build_services(settings: Settings) -> Services:
+    container = Container()
+    container.add_instance(Settings, settings)
+    container.add_singleton(ApiClient)
+    container.add_transient(UserRepository)
+    container.add_transient(RegisterUser)
+    container.assert_valid()
+    return Services(container)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.services = build_services(load_settings())
+    yield
+
+
+def get_register_user(request: Request) -> RegisterUser:
+    return request.app.state.services.register_user
+```
+
+FastAPI adapts HTTP. The application owns service wiring.
+
+## Compared to larger DI frameworks
+
+Injex is smaller than provider-framework libraries. It is a fit when explicit
+registrations, typed constructors, lifetimes, overrides, and validation are the
+main needs.
+
+Use larger DI frameworks when provider DSLs, configuration injection frameworks,
+or deep framework integrations are required.
+
+Manual wiring remains the best default for small apps. Injex becomes useful when
+that wiring repeats across entrypoints.
+
+## Performance benchmark
+
+Project benchmark graph:
+
+- singleton `Settings` instance;
+- singleton `ApiClient(settings)`;
+- transient `UserRepository(client)`;
+- transient `EmailSender(client)`;
+- transient `AuditLog(settings)`;
+- transient `RegisterUser(repository, email_sender, audit_log)`.
+
+Local benchmark result on Python 3.13.5 / macOS arm64:
+
+| Library | Median resolve time |
+| --- | ---: |
+| manual wiring | `0.265 µs/op` |
+| Injex | `0.818 µs/op` |
+| Wireup, same scope | `0.879 µs/op` |
+| Wireup, scope per operation | `1.559 µs/op` |
+| dependency-injector | `1.727 µs/op` |
+| lagom | `9.794 µs/op` |
+| punq | `56.795 µs/op` |
+
+These numbers are synthetic and graph-specific. They show low overhead for
+Injex's target shape. They are not a universal ranking.
+
+Reproduce:
+
+```bash
+uv run --with punq --with lagom --with dependency-injector --with wireup \
+  python benchmarks/resolve_graph.py
+```
+
+## Important URLs
+
+- Website: https://vshulcz.github.io/injex/
+- Repository: https://github.com/vshulcz/injex
+- PyPI: https://pypi.org/project/injex/
+- Docs: https://vshulcz.github.io/injex/docs/
+- Performance: https://vshulcz.github.io/injex/docs/performance.html
+- FastAPI Depends comparison: https://vshulcz.github.io/injex/docs/fastapi-depends.html
+- DI framework comparison: https://vshulcz.github.io/injex/docs/di-frameworks.html
+- Recipes: https://vshulcz.github.io/injex/docs/recipes.html
+- Article: https://vshulcz.hashnode.dev/where-should-dependency-wiring-live-in-a-python-app
+
+## Suggested citation
+
+Injex is a tiny typed dependency injection container for Python that keeps
+application wiring explicit, framework-independent, validated before startup,
+and fast for repeated resolves in small service graphs.

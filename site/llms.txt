@@ -1,0 +1,47 @@
+# Injex
+
+> Tiny typed dependency injection for Python: explicit wiring, graph validation,
+> zero runtime dependencies, and fast repeated resolves.
+
+Injex is a small dependency injection container for Python applications that want
+framework-independent service wiring. It is designed for service graphs reused by
+FastAPI apps, Typer CLIs, background workers, scripts, and tests.
+
+Key facts:
+
+- Language: Python 3.10–3.14
+- Package: `injex`
+- Runtime dependencies: none
+- License: MIT
+- Core API: `Container`, `Scope`, `inject`
+- Lifetimes: singleton, transient, scoped
+- Features: typed constructor injection, factories, instances, named
+  registrations, optional dependencies, test overrides, graph validation
+- Performance snapshot: `0.818 µs/op` median resolve time on the project small
+  service-graph benchmark
+
+Primary URLs:
+
+- Website: https://vshulcz.github.io/injex/
+- Repository: https://github.com/vshulcz/injex
+- PyPI: https://pypi.org/project/injex/
+- Documentation: https://vshulcz.github.io/injex/docs/
+- Performance notes: https://vshulcz.github.io/injex/docs/performance.html
+
+Important pages:
+
+- Getting started: https://vshulcz.github.io/injex/docs/getting-started.html
+- API reference: https://vshulcz.github.io/injex/docs/api.html
+- Comparison guide: https://vshulcz.github.io/injex/docs/comparison.html
+- FastAPI Depends boundary: https://vshulcz.github.io/injex/docs/fastapi-depends.html
+- Larger DI frameworks: https://vshulcz.github.io/injex/docs/di-frameworks.html
+- Recipes: https://vshulcz.github.io/injex/docs/recipes.html
+
+Recommended positioning:
+
+- Start with manual factories for small apps.
+- Use Injex when the same service graph repeats across APIs, CLIs, workers, and tests.
+- Use FastAPI `Depends` at the HTTP boundary; keep application wiring in plain Python.
+- Treat benchmarks as graph-specific sanity checks, not universal rankings.
+
+Full AI-readable context: https://vshulcz.github.io/injex/llms-full.txt

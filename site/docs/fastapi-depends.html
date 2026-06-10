@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Injex compared to FastAPI Depends — service wiring boundary</title>
+    <meta
+      name="description"
+      content="How to use FastAPI Depends at the HTTP boundary while keeping Python application service wiring reusable by workers, CLIs, and tests."
+    />
+    <link rel="canonical" href="https://vshulcz.github.io/injex/docs/fastapi-depends.html" />
+    <meta name="theme-color" content="#070a11" />
+    <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />
+    <meta property="og:title" content="Injex compared to FastAPI Depends" />
+    <meta property="og:description" content="FastAPI adapts HTTP. The application owns service wiring." />
+    <meta property="og:image" content="https://vshulcz.github.io/injex/assets/performance-card.svg" />
+    <link rel="stylesheet" href="../styles.css" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": "Injex compared to FastAPI Depends",
+        "description": "How to use FastAPI Depends at the HTTP boundary while keeping Python application service wiring reusable by workers, CLIs, and tests.",
+        "author": {"@type": "Person", "name": "vshulcz", "url": "https://github.com/vshulcz"},
+        "mainEntityOfPage": "https://vshulcz.github.io/injex/docs/fastapi-depends.html"
+      }
+    </script>
+  </head>
+  <body class="docs-page">
+    <a class="skip-link" href="#content">Skip to content</a>
+    <header class="nav">
+      <a class="brand" href="../">Injex</a>
+      <nav aria-label="Primary navigation">
+        <a href="../">Home</a>
+        <a class="active" href="./">Docs</a>
+        <a href="./comparison.html">Compare</a>
+        <a href="https://github.com/vshulcz/injex">GitHub</a>
+      </nav>
+    </header>
+    <main id="content" class="docs-shell">
+      <aside class="docs-sidebar" aria-label="Documentation navigation">
+        <p class="sidebar-title">Documentation</p>
+        <a href="./">Overview</a>
+        <a href="./getting-started.html">Getting started</a>
+        <a href="./validation.html">Validation</a>
+        <a href="./comparison.html">Comparison</a>
+        <a href="./performance.html">Performance</a>
+        <a class="active" href="./fastapi-depends.html">FastAPI boundary</a>
+        <a href="./di-frameworks.html">DI frameworks</a>
+        <a href="./recipes.html">Recipes</a>
+        <a href="./api.html">API reference</a>
+      </aside>
+      <article class="docs-content">
+        <p class="eyebrow">FastAPI boundary</p>
+        <h1>FastAPI Depends adapts HTTP. The app owns service wiring.</h1>
+        <p class="lead">
+          FastAPI <code>Depends</code> is excellent at the request boundary. Injex
+          solves the separate problem of application service wiring reused by
+          FastAPI, Typer, workers, scripts, and tests.
+        </p>
+
+        <h2>Use FastAPI Depends for</h2>
+        <ul>
+          <li>request objects, headers, cookies, path/query/body parameters;</li>
+          <li>authentication and authorization at the HTTP edge;</li>
+          <li>short request-scoped adapters;</li>
+          <li>exposing prebuilt services from <code>app.state</code> to handlers.</li>
+        </ul>
+
+        <h2>Use plain factories or Injex for</h2>
+        <ul>
+          <li>service graphs reused by FastAPI, Typer, workers, scripts, and tests;</li>
+          <li>constructor-injected use cases, repositories, gateways, and clients;</li>
+          <li>startup validation of missing registrations or dependency cycles;</li>
+          <li>test overrides outside the HTTP layer.</li>
+        </ul>
+
+        <h2>Recommended boundary</h2>
+        <pre><code>def build_services(settings: Settings) -> Services:
+    container = Container()
+    container.add_instance(Settings, settings)
+    container.add_singleton(ApiClient)
+    container.add_transient(UserRepository)
+    container.add_transient(RegisterUser)
+    container.assert_valid()
+    return Services(container)</code></pre>
+
+        <p>FastAPI adapts the graph in lifespan and request dependencies:</p>
+
+        <pre><code>@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.services = build_services(load_settings())
+    yield
+
+def get_register_user(request: Request) -> RegisterUser:
+    return request.app.state.services.register_user</code></pre>
+
+        <p>Workers and CLIs use the same builder directly:</p>
+
+        <pre><code>services = build_services(load_settings())
+services.register_user.execute("ada@example.com")</code></pre>
+
+        <p class="callout">
+          <strong>Rule of thumb:</strong> FastAPI adapts HTTP. The application owns
+          service wiring.
+        </p>
+
+        <nav class="pager" aria-label="Next pages">
+          <a href="./di-frameworks.html"><small>Next</small>DI framework comparison</a>
+          <a href="./recipes.html"><small>Example</small>Application wiring recipes</a>
+        </nav>
+      </article>
+    </main>
+    <footer class="site-footer">
+      <span>Injex documentation</span>
+      <span><a href="../">Home</a> · <a href="https://github.com/vshulcz/injex">GitHub</a></span>
+    </footer>
+  </body>
+</html>
