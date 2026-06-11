@@ -9,12 +9,18 @@ and this project uses semantic versioning.
 
 ### Changed
 
-- Fast-path resolution no longer pays a per-resolve cycle guard. A compiled fast
-  creator is only built when the whole subgraph is statically proven acyclic and
-  fully registered, so the runtime `cls in resolving` check could never fire on
-  that path. Removing it lowers median resolve time on the project benchmark from
-  `0.818 µs/op` to `0.629 µs/op` (same machine and graph). Cycle detection is
-  unchanged for the interpreted path and for `validate()` / `assert_valid()`.
+- Faster hot-path resolution, from `0.818 µs/op` to `0.561 µs/op` on the project
+  benchmark (same machine and graph), via two changes:
+  - the fast resolve path no longer pays a per-resolve cycle guard. A compiled
+    fast creator is only built when the whole subgraph is statically proven
+    acyclic and fully registered, so the runtime `cls in resolving` check could
+    never fire there;
+  - `resolve()` now dispatches through a direct `interface -> creator` cache for
+    the common unnamed, no-scope case, skipping the per-call key-tuple allocation
+    and registration attribute reads.
+  Cycle detection is unchanged for the interpreted path and for `validate()` /
+  `assert_valid()`; the dispatch cache is cleared on every registration change
+  and test override.
 
 ## [1.3.0] - 2026-06-06
 

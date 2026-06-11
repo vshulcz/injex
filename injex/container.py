@@ -40,6 +40,8 @@ from .planning import (
 )
 from .registry import LifeStyle, OverrideContext, Registration, RegistrationType
 
+_MISSING = object()
+
 
 class Scope:
     __slots__ = ("container", "_scoped_instances")
@@ -58,7 +60,13 @@ class Scope:
 
 
 class Container:
-    __slots__ = ("_registrations", "_singletons", "_resolving", "_version")
+    __slots__ = (
+        "_registrations",
+        "_singletons",
+        "_resolving",
+        "_version",
+        "_noscope_creators",
+    )
 
     def __init__(self):
         self._registrations: Dict[
@@ -67,9 +75,15 @@ class Container:
         self._singletons: Dict[Any, Any] = {}
         self._resolving: Set[Type] = set()
         self._version = 0
+        # Direct interface -> creator dispatch for the common name=None,
+        # no-scope-needed case. Skips the per-resolve key-tuple allocation and
+        # registration attribute reads. Value is None when the interface is not
+        # eligible for the no-scope fast path. Cleared on every invalidation.
+        self._noscope_creators: Dict[Any, Optional[Callable[[Any], Any]]] = {}
 
     def _invalidate_fast_creators(self) -> None:
         self._version += 1
+        self._noscope_creators.clear()
 
     def register(
         self,
@@ -188,6 +202,35 @@ class Container:
         return removed
 
     def resolve(self, interface: Union[Type, str], name: Optional[str] = None) -> Any:
+        if name is None:
+            creator = self._noscope_creators.get(interface, _MISSING)
+            if creator is _MISSING:
+                creator = self._prime_noscope_creator(interface)
+            if creator is not None:
+                return creator(None)  # type: ignore[operator]
+            scope = Scope(self)
+            return self._resolve_one(interface, scope, None)
+        return self._resolve_slow(interface, name)
+
+    def _prime_noscope_creator(
+        self, interface: Union[Type, str]
+    ) -> Optional[Callable[[Any], Any]]:
+        creator: Optional[Callable[[Any], Any]] = None
+        registrations = self._registrations.get((interface, None))
+        if registrations:
+            registration = registrations[0]
+            self._get_fast_creator(registration, (interface, None))
+            if (
+                registration.fast_creator is not None
+                and not registration.fast_creator_needs_scope
+            ):
+                creator = registration.fast_creator
+        self._noscope_creators[interface] = creator
+        return creator
+
+    def _resolve_slow(
+        self, interface: Union[Type, str], name: Optional[str]
+    ) -> Any:
         key = (interface, name)
         registrations = self._registrations.get(key)
         if registrations:
