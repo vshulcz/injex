@@ -9,18 +9,24 @@ and this project uses semantic versioning.
 
 ### Changed
 
-- Faster hot-path resolution, from `0.818 µs/op` to `0.561 µs/op` on the project
-  benchmark (same machine and graph), via two changes:
+- Faster hot-path resolution, from `0.818 µs/op` to `0.401 µs/op` on the project
+  benchmark (same machine and graph, roughly halved), via three changes:
   - the fast resolve path no longer pays a per-resolve cycle guard. A compiled
     fast creator is only built when the whole subgraph is statically proven
     acyclic and fully registered, so the runtime `cls in resolving` check could
     never fire there;
   - `resolve()` now dispatches through a direct `interface -> creator` cache for
     the common unnamed, no-scope case, skipping the per-call key-tuple allocation
-    and registration attribute reads.
+    and registration attribute reads;
+  - transient service graphs are compiled to a single flat creator that inlines
+    the constructor spine and computes each shared singleton/instance once
+    (common-subexpression elimination), removing the per-resolve closure call for
+    every intermediate transient. Singleton, scoped, and instance leaves reuse the
+    existing creators, so caching, laziness, and invalidation are unchanged; any
+    graph the compiler cannot handle falls back to the previous creators.
   Cycle detection is unchanged for the interpreted path and for `validate()` /
-  `assert_valid()`; the dispatch cache is cleared on every registration change
-  and test override.
+  `assert_valid()`. The compiled flat path is verified against an independent
+  reference resolver over thousands of randomized graphs.
 
 ## [1.3.0] - 2026-06-06
 

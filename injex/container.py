@@ -43,6 +43,10 @@ from .registry import LifeStyle, OverrideContext, Registration, RegistrationType
 _MISSING = object()
 
 
+class _NotFlat(Exception):
+    """Raised internally when a graph cannot be compiled to a flat creator."""
+
+
 class Scope:
     __slots__ = ("container", "_scoped_instances")
 
@@ -477,7 +481,9 @@ class Container:
         if registration.fast_creator_version == self._version:
             return registration.fast_creator
 
-        fast_creator = self._build_fast_creator(registration, key, set())
+        fast_creator = self._build_flat_creator(registration, key)
+        if fast_creator is None:
+            fast_creator = self._build_fast_creator(registration, key, set())
         if fast_creator is None:
             registration.fast_creator = None
             registration.fast_creator_needs_scope = False
@@ -487,6 +493,124 @@ class Container:
             )
         registration.fast_creator_version = self._version
         return registration.fast_creator
+
+    def _build_flat_creator(
+        self,
+        registration: Registration,
+        key: Tuple[Union[Type, str], Optional[str]],
+    ) -> Optional[Tuple[Callable[[Any], Any], bool]]:
+        """Compile a flat creator for a transient service graph.
+
+        Transient services are inlined into a single constructed expression;
+        shared singletons/instances are computed once (common-subexpression
+        elimination) and reused. This removes the per-resolve closure call for
+        every intermediate transient and the duplicate work for singletons used
+        more than once.
+
+        Singleton, scoped, and instance leaves reuse the existing nested-closure
+        creators (so caching, laziness, and invalidation are unchanged); only the
+        transient construction spine is flattened. Returns ``None`` for any graph
+        shape it cannot handle, so the caller falls back to the nested-closure
+        builder and then to the interpreted path. No service names, class names,
+        or user values are ever interpolated into generated source — only opaque
+        generated symbols bound in a private namespace.
+        """
+        if (
+            registration.kind != RegistrationType.SERVICE
+            or registration.lifestyle != LifeStyle.TRANSIENT
+        ):
+            return None
+
+        namespace: Dict[str, Any] = {}
+        prelude: List[str] = []
+        shared: Dict[Any, str] = {}
+        counter = [0]
+        needs_scope = [False]
+
+        def bind(obj: Any, prefix: str) -> str:
+            counter[0] += 1
+            sym = f"{prefix}{counter[0]}"
+            namespace[sym] = obj
+            return sym
+
+        def emit(
+            reg: Registration,
+            node_key: Tuple[Union[Type, str], Optional[str]],
+            path: frozenset,
+        ) -> str:
+            if reg.kind == RegistrationType.INSTANCE:
+                if node_key in shared:
+                    return shared[node_key]
+                sym = bind(reg.instance, "c")
+                shared[node_key] = sym
+                return sym
+
+            if reg.kind != RegistrationType.SERVICE:
+                raise _NotFlat
+
+            cls = reg.implementation
+            if cls is None or node_key in path:
+                raise _NotFlat
+
+            plan = self._get_service_plan(reg)
+            if plan.property_dependencies:
+                raise _NotFlat
+
+            lifestyle = reg.lifestyle
+            if lifestyle in (LifeStyle.SINGLETON, LifeStyle.SCOPED):
+                if node_key in shared:
+                    return shared[node_key]
+                built = self._build_fast_creator(reg, node_key, set())
+                if built is None:
+                    raise _NotFlat
+                leaf_creator, leaf_needs_scope = built
+                if lifestyle == LifeStyle.SCOPED or leaf_needs_scope:
+                    needs_scope[0] = True
+                getter = bind(leaf_creator, "g")
+                counter[0] += 1
+                var = f"v{counter[0]}"
+                prelude.append(f"{var} = {getter}(scope)")
+                shared[node_key] = var
+                return var
+
+            # Transient: inline the constructor, recursing into dependencies.
+            child_path = path | {node_key}
+            child_exprs: List[str] = []
+            for dependency_plan in plan.dependencies:
+                if dependency_plan.inject_container:
+                    raise _NotFlat
+                if dependency_plan.dependency_type == inspect.Parameter.empty:
+                    raise _NotFlat
+                dependency_key = dependency_plan.dependency_key
+                if dependency_key is None:
+                    raise _NotFlat
+                dependency_regs = self._registrations.get(dependency_key)
+                if not dependency_regs:
+                    if dependency_plan.has_default:
+                        child_exprs.append(bind(dependency_plan.default, "d"))
+                        continue
+                    if dependency_plan.is_optional:
+                        child_exprs.append("None")
+                        continue
+                    raise _NotFlat
+                child_exprs.append(
+                    emit(dependency_regs[0], dependency_key, child_path)
+                )
+
+            cls_sym = bind(cls, "t")
+            return f"{cls_sym}({', '.join(child_exprs)})"
+
+        try:
+            root_expr = emit(registration, key, frozenset())
+        except _NotFlat:
+            return None
+
+        source_lines = ["def _flat(scope):"]
+        source_lines.extend(f"    {line}" for line in prelude)
+        source_lines.append(f"    return {root_expr}")
+        local: Dict[str, Any] = {}
+        exec("\n".join(source_lines), namespace, local)  # noqa: S102
+        return local["_flat"], needs_scope[0]
 
     def _build_fast_creator(
         self,
