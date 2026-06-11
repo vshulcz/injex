@@ -12,9 +12,17 @@ and documentation rather than framework-specific abstractions.
 
 ## Later
 
-- Publish a small docs site if the guide set outgrows Markdown files.
-- Add recipes for CLI, web, worker, and clean architecture layouts.
-- Explore opt-in diagnostics for registration inspection.
+- Explore opt-in diagnostics for registration inspection (print/inspect the
+  resolved graph).
+- Grow the recipe and migration guides as real usage patterns emerge.
+
+## Done
+
+- Published the documentation site at
+  [vshulcz.github.io/injex](https://vshulcz.github.io/injex/).
+- Added recipes for CLI, web, worker, and clean architecture layouts.
+- Added a reproducible resolve benchmark and performance notes.
+- Cached dependency plans with a fast path for common constructor graphs.
 
 ## Non-goals
 
