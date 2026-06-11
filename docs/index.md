@@ -19,6 +19,8 @@ framework-sized dependency injection container.
   reproduce the hot-path resolve comparison.
 - [Recipes](./recipes.md): FastAPI composition root, worker job scope, CLI
   command wiring, and test override boundaries.
+- [Migrating from a factories module](./migrating-from-factories.md): move a
+  hand-written `factories.py` to Injex without changing application classes.
 - [Usage scenarios](./usage-scenarios.md): where Injex fits in services, CLIs,
   workers, and tests.
 - [Container validation](./validation.md): check wiring before startup without
@@ -36,6 +38,10 @@ framework-sized dependency injection container.
 - [Scoped services](../examples/scoped.py)
 - [Factories](../examples/factory.py)
 - [Named registrations](../examples/named.py)
+- [Optional dependencies](../examples/optional.py)
+- [Property injection](../examples/property.py)
+- [Cycle detection](../examples/cyclic.py)
+- [Interface integration](../examples/integration.py)
 
 ## Articles and launch notes
 

@@ -21,6 +21,27 @@ pip install injex
 
 Website: [vshulcz.github.io/injex](https://vshulcz.github.io/injex/)
 
+## How it fits
+
+Define one validated service graph at the composition root, then let every
+entrypoint resolve from it instead of re-wiring its own copy.
+
+```mermaid
+flowchart LR
+  subgraph root["Composition root — one validated graph"]
+    direction LR
+    S[Settings] --> C[ApiClient]
+    C --> R[UserRepository]
+    C --> E[EmailSender]
+    R --> U[RegisterUser]
+    E --> U
+  end
+  root --> API[FastAPI]
+  root --> CLI[Typer CLI]
+  root --> WK[Worker]
+  root --> TS[Tests]
+```
+
 ## The problem it solves
 
 Without a composition root, the same object graph often leaks into every
@@ -260,6 +281,7 @@ explicit while still covering common application wiring needs.
 - [Compared to larger DI frameworks](./docs/di-frameworks.md)
 - [Performance notes](./docs/performance.md)
 - [Recipes](./docs/recipes.md)
+- [Migrating from a factories module](./docs/migrating-from-factories.md)
 - [Usage scenarios](./docs/usage-scenarios.md)
 - [API reference](./docs/api.md)
 - [Article: When Python manual wiring turns into copy-paste architecture](https://vshulcz.hashnode.dev/when-python-manual-wiring-turns-into-copy-paste-architecture)
