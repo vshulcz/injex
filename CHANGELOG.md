@@ -7,6 +7,15 @@ and this project uses semantic versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- Fast-path resolution no longer pays a per-resolve cycle guard. A compiled fast
+  creator is only built when the whole subgraph is statically proven acyclic and
+  fully registered, so the runtime `cls in resolving` check could never fire on
+  that path. Removing it lowers median resolve time on the project benchmark from
+  `0.818 µs/op` to `0.629 µs/op` (same machine and graph). Cycle detection is
+  unchanged for the interpreted path and for `validate()` / `assert_valid()`.
+
 ## [1.3.0] - 2026-06-06
 
 ### Added

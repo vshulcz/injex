@@ -35,7 +35,7 @@ from .planning import (
     _get_parameters,
     _get_type_hints,
     _make_constant_creator,
-    _make_guarded_fast_creator,
+    _make_fast_raw_creator,
     _none_creator,
 )
 from .registry import LifeStyle, OverrideContext, Registration, RegistrationType
@@ -503,8 +503,12 @@ class Container:
         finally:
             path.remove(key)
 
-        resolving = self._resolving
-        create_raw = _make_guarded_fast_creator(cls, dependency_creators, resolving)
+        # A fast creator is only built when the whole subgraph below `cls` is
+        # statically known to be acyclic and fully registered (cycles make
+        # `_build_fast_creator` return None via the `key in path` guard above).
+        # The runtime cycle guard can therefore never fire on this path, so we
+        # use the unguarded raw creator and skip the per-resolve set churn.
+        create_raw = _make_fast_raw_creator(cls, dependency_creators)
 
         if registration.lifestyle == LifeStyle.TRANSIENT:
             return create_raw, needs_scope
