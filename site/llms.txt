@@ -36,6 +36,7 @@ Important pages:
 - FastAPI Depends boundary: https://vshulcz.github.io/injex/docs/fastapi-depends.html
 - Larger DI frameworks: https://vshulcz.github.io/injex/docs/di-frameworks.html
 - Recipes: https://vshulcz.github.io/injex/docs/recipes.html
+- Migrating from a factories module: https://vshulcz.github.io/injex/docs/migrating-from-factories.html
 
 Recommended positioning:
 
