@@ -117,13 +117,13 @@ machine.
 
 | Library | Median resolve time |
 | --- | ---: |
-| manual wiring | `0.265 µs/op` |
-| Injex | `0.561 µs/op` |
-| Wireup, same scope | `0.875 µs/op` |
-| Wireup, scope per operation | `1.512 µs/op` |
-| dependency-injector | `1.703 µs/op` |
-| lagom | `9.854 µs/op` |
-| punq | `59.859 µs/op` |
+| manual wiring | `0.271 µs/op` |
+| Injex | `0.401 µs/op` |
+| Wireup, same scope | `0.910 µs/op` |
+| Wireup, scope per operation | `1.605 µs/op` |
+| dependency-injector | `1.776 µs/op` |
+| lagom | `10.392 µs/op` |
+| punq | `59.662 µs/op` |
 
 Benchmarks are synthetic and not a universal ranking. They are included to show
 the approximate overhead of Injex in its target shape: small explicit service
