@@ -17,7 +17,7 @@ Key facts:
 - Lifetimes: singleton, transient, scoped
 - Features: typed constructor injection, factories, instances, named
   registrations, optional dependencies, test overrides, graph validation
-- Performance snapshot: `0.629 µs/op` median resolve time on the project small
+- Performance snapshot: `0.561 µs/op` median resolve time on the project small
   service-graph benchmark
 
 Primary URLs:

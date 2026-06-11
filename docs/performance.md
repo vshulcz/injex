@@ -33,12 +33,12 @@ Environment used for the project benchmark:
 | Library | Median resolve time |
 | --- | ---: |
 | manual wiring | `0.265 µs/op` |
-| Injex | `0.629 µs/op` |
-| Wireup, same scope | `0.877 µs/op` |
-| Wireup, scope per operation | `1.545 µs/op` |
-| dependency-injector | `1.721 µs/op` |
-| lagom | `9.840 µs/op` |
-| punq | `57.136 µs/op` |
+| Injex | `0.561 µs/op` |
+| Wireup, same scope | `0.875 µs/op` |
+| Wireup, scope per operation | `1.512 µs/op` |
+| dependency-injector | `1.703 µs/op` |
+| lagom | `9.854 µs/op` |
+| punq | `59.859 µs/op` |
 
 These numbers are not a universal ranking. They are a small synthetic benchmark
 for one graph shape. Different lifetimes, framework integrations, factories,
