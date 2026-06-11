@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Migrating from a factories module to Injex — Python dependency injection</title>
+    <meta
+      name="description"
+      content="Move a hand-written Python factories.py to the Injex dependency injection container without changing application classes: lifetime mapping, test overrides, and incremental migration."
+    />
+    <link rel="canonical" href="https://vshulcz.github.io/injex/docs/migrating-from-factories.html" />
+    <meta name="theme-color" content="#070a11" />
+    <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />
+    <meta property="og:title" content="Migrating from a factories module to Injex" />
+    <meta property="og:description" content="Move a hand-written factories.py to Injex without changing application classes." />
+    <meta property="og:image" content="https://vshulcz.github.io/injex/assets/og-card.png" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="docs-page">
+    <a class="skip-link" href="#content">Skip to content</a>
+    <header class="nav">
+      <a class="brand" href="../">Injex</a>
+      <nav aria-label="Primary navigation">
+        <a href="../">Home</a>
+        <a class="active" href="./">Docs</a>
+        <a href="./comparison.html">Compare</a>
+        <a href="https://github.com/vshulcz/injex">GitHub</a>
+      </nav>
+    </header>
+    <main id="content" class="docs-shell">
+      <aside class="docs-sidebar" aria-label="Documentation navigation">
+        <p class="sidebar-title">Documentation</p>
+        <a href="./">Overview</a>
+        <a href="./getting-started.html">Getting started</a>
+        <a href="./validation.html">Validation</a>
+        <a href="./comparison.html">Comparison</a>
+        <a href="./fastapi-depends.html">FastAPI boundary</a>
+        <a href="./di-frameworks.html">DI frameworks</a>
+        <a href="./performance.html">Performance</a>
+        <a href="./recipes.html">Recipes</a>
+        <a class="active" href="./migrating-from-factories.html">Migrating from factories</a>
+        <a href="./why.html">Why Injex</a>
+        <a href="./usage.html">Usage scenarios</a>
+        <a href="./python-dependency-injection.html">Python DI guide</a>
+        <a href="./api.html">API reference</a>
+      </aside>
+      <article class="docs-content">
+        <p class="eyebrow">Guide</p>
+        <h1>Move a factories module to Injex.</h1>
+        <p class="lead">
+          Many Python apps start with a hand-written <code>factories.py</code> that builds the
+          service graph. When the same graph is rebuilt across API startup, CLI commands,
+          workers, and tests, it drifts out of sync. This guide moves that wiring to Injex
+          without changing a single application class.
+        </p>
+
+        <p class="callout">
+          Keep manual factories while they stay small and local. Move to Injex when the same
+          graph repeats across several entrypoints and you want one validated composition root.
+        </p>
+
+        <h2>Before: manual factories</h2>
+        <p>A typical factories module wires everything by hand and is imported by each entrypoint:</p>
+        <pre><code># factories.py
+from functools import lru_cache
+
+
+@lru_cache
+def get_settings() -&gt; Settings:
+    return load_settings()
+
+
+@lru_cache
+def get_api_client() -&gt; ApiClient:
+    return ApiClient(get_settings())
+
+
+def get_user_repository() -&gt; UserRepository:
+    return UserRepository(get_api_client())
+
+
+def get_register_user() -&gt; RegisterUser:
+    return RegisterUser(get_user_repository(), get_email_sender())</code></pre>
+        <p>This works, but lifetimes are encoded ad hoc, there is no single place to validate the
+          graph, and every new service adds another <code>get_*</code> function.</p>
+
+        <h2>After: one container at the composition root</h2>
+        <p>Application classes stay the same — plain constructors with type hints. Only wiring changes:</p>
+        <pre><code># composition.py
+from injex import Container
+
+
+def build_container() -&gt; Container:
+    container = Container()
+    container.add_instance(Settings, load_settings())
+    container.add_singleton(ApiClient)
+    container.add_transient(UserRepository)
+    container.add_transient(EmailSender)
+    container.add_transient(RegisterUser)
+    container.assert_valid()
+    return container</code></pre>
+        <p>Each entrypoint builds the container once and resolves what it needs:</p>
+        <pre><code>container = build_container()
+register_user = container.resolve(RegisterUser)</code></pre>
+
+        <h2>Mapping table</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Manual factory pattern</th><th>Injex registration</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>@lru_cache</code> factory (one shared instance)</td><td><code>add_singleton(X)</code></td></tr>
+              <tr><td>plain factory (new each call)</td><td><code>add_transient(X)</code></td></tr>
+              <tr><td>per-request / per-job object reused in one unit</td><td><code>add_scoped(X)</code></td></tr>
+              <tr><td>factory returning a prebuilt object</td><td><code>add_instance(X, obj)</code></td></tr>
+              <tr><td>custom construction logic</td><td><code>add_singleton_factory</code> / <code>add_transient_factory</code></td></tr>
+              <tr><td>two implementations of one interface</td><td><code>add_*(X, Impl, name="a")</code></td></tr>
+              <tr><td>constructor reads dependencies positionally</td><td>unchanged — resolved from type hints</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2>Tests: from patching to overrides</h2>
+        <p>Instead of patching the factory module, scope the swap to a <code>with</code> block. Production
+          registrations stay untouched and the override restores automatically:</p>
+        <pre><code>def test_register():
+    container = build_container()
+    fake = FakeEmailSender()
+    with container.override(EmailSender, instance=fake):
+        register_user = container.resolve(RegisterUser)
+        register_user.execute("ada@example.com")
+    assert fake.sent_to == ["ada@example.com"]</code></pre>
+
+        <h2>Incremental migration</h2>
+        <p>You do not have to convert everything at once:</p>
+        <ul>
+          <li>add a container alongside the existing factories module;</li>
+          <li>move leaf services first (clients, repositories), keep <code>get_*</code> wrappers that call <code>container.resolve(...)</code>;</li>
+          <li>move higher-level use cases once their dependencies are registered;</li>
+          <li>replace <code>monkeypatch</code> calls with <code>override()</code> as you touch each test;</li>
+          <li>delete the old <code>get_*</code> functions when nothing imports them.</li>
+        </ul>
+        <p>At every step the application classes stay unchanged — only the wiring moves. See the
+          <a href="./fastapi-depends.html">FastAPI boundary</a> guide for keeping <code>Depends</code> at the HTTP edge.</p>
+
+        <nav class="pager" aria-label="Next pages">
+          <a href="./recipes.html"><small>Patterns</small>Recipes</a>
+          <a href="./fastapi-depends.html"><small>Boundary</small>FastAPI Depends</a>
+        </nav>
+      </article>
+    </main>
+    <footer class="site-footer">
+      <span>Injex documentation</span>
+      <span><a href="../">Home</a> · <a href="https://github.com/vshulcz/injex">GitHub</a></span>
+    </footer>
+  </body>
+</html>
