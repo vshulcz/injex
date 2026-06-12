@@ -1,6 +1,6 @@
 # Performance notes
 
-Injex is designed for small explicit service graphs. Version 1.3.0 adds cached
+Injex is designed for small explicit service graphs. Injex adds cached
 dependency plans and a fast resolve path for the common case: singleton
 infrastructure plus transient application services.
 
@@ -24,7 +24,7 @@ Environment used for the project benchmark:
 
 - Python `3.13.5`;
 - macOS arm64;
-- `injex` main (fast-path resolution, post-1.3.0);
+- `injex 1.4.0`;
 - `wireup 2.11.1`;
 - `dependency-injector 4.49.0`;
 - `lagom 2.7.7`;

@@ -232,9 +232,7 @@ class Container:
         self._noscope_creators[interface] = creator
         return creator
 
-    def _resolve_slow(
-        self, interface: Union[Type, str], name: Optional[str]
-    ) -> Any:
+    def _resolve_slow(self, interface: Union[Type, str], name: Optional[str]) -> Any:
         key = (interface, name)
         registrations = self._registrations.get(key)
         if registrations:
@@ -593,9 +591,7 @@ class Container:
                         child_exprs.append("None")
                         continue
                     raise _NotFlat
-                child_exprs.append(
-                    emit(dependency_regs[0], dependency_key, child_path)
-                )
+                child_exprs.append(emit(dependency_regs[0], dependency_key, child_path))
 
             cls_sym = bind(cls, "t")
             return f"{cls_sym}({', '.join(child_exprs)})"

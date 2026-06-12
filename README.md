@@ -109,7 +109,7 @@ with container.override(EmailSender, instance=fake_mailer):
 
 ## Performance snapshot
 
-Injex 1.3.0 compiles and caches simple dependency plans, then uses a fast path
+Injex compiles and caches simple dependency plans, then uses a fast path
 for common constructor-injection graphs. In a small synthetic graph with a
 singleton `Settings`, singleton `ApiClient`, and transient repository/service
 objects, Injex resolves faster than several popular Python DI containers on this

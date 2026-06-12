@@ -220,8 +220,8 @@ def test_flat_creator_declines_property_injection():
 
     class Service:
         @inject
-        def dep(self) -> Dep:  # property injection
-            ...
+        def dep(self) -> Dep:  # property injection; body never runs
+            return Dep()
 
     c = Container()
     c.add_singleton(Dep)

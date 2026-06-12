@@ -7,6 +7,8 @@ and this project uses semantic versioning.
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-06-12
+
 ### Changed
 
 - Faster hot-path resolution, from `0.818 µs/op` to `0.401 µs/op` on the project

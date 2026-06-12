@@ -27,7 +27,7 @@ uv run --with punq --with lagom --with dependency-injector --with wireup \
 Environment:
 
 - Python `3.13.5` on macOS arm64;
-- `injex` main (fast-path resolution, post-1.3.0);
+- `injex 1.4.0`;
 - `wireup 2.11.1`;
 - `dependency-injector 4.49.0`;
 - `lagom 2.7.7`;
