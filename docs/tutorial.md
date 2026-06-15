@@ -20,15 +20,13 @@
 - [Optional Dependencies](#optional-dependencies)
 - [Test Overrides](#test-overrides)
 - [Container Validation](#container-validation)
-3. [Advanced Topics](#advanced-topics)
+2. [Advanced Topics](#advanced-topics)
 - [Scopes and Scoped Services](#scopes-and-scoped-services)
 - [Cyclic Dependencies](#cyclic-dependencies)
 - [Error Handling](#error-handling)
-4. [Real-World Examples](#real-world-examples)
+3. [Real-World Examples](#real-world-examples)
 - [Building a Mediator with Pipeline Behaviors](#building-a-mediator-with-pipeline-behaviors)
 - [Creating an API Service with Database Integration](#creating-an-api-service-with-database-integration)
-5. [Best Practices](#best-practices)
-6. [Conclusion](#conclusion)
 
 ## Core Concepts
 
