@@ -380,105 +380,88 @@ A mediator pattern allows you to decouple the sending and handling of requests. 
 
 ```python
 from abc import ABC, abstractmethod
-from typing import Any, Callable, List
+from typing import Callable
 
-# Request interface
-class IRequest(ABC):
-    pass
+from injex import Container
 
-# Handler interface
-class IRequestHandler(ABC):
-    @abstractmethod
-    def handle(self, request: IRequest) -> Any:
-        pass
 
-# Pipeline behavior interface
-class IPipelineBehavior(ABC):
-    @abstractmethod
-    def handle(self, request: IRequest, next: Callable) -> Any:
-        pass
-
-# Implement multiple behaviors
-class LoggingBehavior(IPipelineBehavior):
-    async def process(self, request: IRequest, next_handler: Callable) -> Any:
-        print(f"Logging: {request}")
-        return await next_handler()
-
-class AuthorizationBehavior(IPipelineBehavior):
-    async def process(self, request: IRequest, next_handler: Callable) -> Any:
-        print("Authorizing request")
-        # Perform authorization logic (e.g., check permissions)
-        return await next_handler()
-
-# Implement a Mediator
-class Mediator:
-    def __init__(self, container: Container):
-        self.container = container
-
-    def send(self, request: IRequest) -> Any:
-        # Resolve all behaviors from the DI container
-        behaviors = self.container.resolve_all(IPipelineBehavior)
-        handler = self.container.resolve(IRequestHandler)
-
-        return await self._execute_pipeline(request, handler)
-
-    async def _execute_pipeline(
-        self, request: IRequest, handler: IRequestHandler
-    ) -> Any:
-        behaviors: list[IPipelineBehavior] = self.container.resolve_all(
-            IPipelineBehavior
-        )
-
-        async def final_handler() -> Any:  # type: ignore
-            return await handler.handle(request)
-
-        for behavior in reversed(behaviors):
-            next_handler = final_handler
-
-            def final_handler(beh=behavior, next_handler=next_handler):
-                return beh.process(request=request, next_handler=next_handler)
-
-        return await final_handler()
-
-class MyRequest(IRequest):
+class Request:
     def __init__(self, data: str):
         self.data = data
 
-class MyRequestHandler(IRequestHandler):
-    def handle(self, request: MyRequest) -> Any:
-        print(f"Processing request: {request.data}")
+
+class Handler(ABC):
+    @abstractmethod
+    def handle(self, request: Request) -> str: ...
+
+
+# A behavior wraps the handler to add a cross-cutting concern.
+class Behavior(ABC):
+    @abstractmethod
+    def process(self, request: Request, call_next: Callable[[], str]) -> str: ...
+
+
+class LoggingBehavior(Behavior):
+    def process(self, request: Request, call_next: Callable[[], str]) -> str:
+        print(f"Logging: {request.data}")
+        return call_next()
+
+
+class AuthorizationBehavior(Behavior):
+    def process(self, request: Request, call_next: Callable[[], str]) -> str:
+        print("Authorizing request")
+        return call_next()
+
+
+class EchoHandler(Handler):
+    def handle(self, request: Request) -> str:
+        print(f"Handling: {request.data}")
         return f"Processed: {request.data}"
 
-# Create a DI container
+
+class Mediator:
+    def __init__(self, container):  # an unannotated `container` is injected by Injex
+        self.container = container
+
+    def send(self, request: Request) -> str:
+        behaviors = self.container.resolve_all(Behavior)
+        handler = self.container.resolve(Handler)
+
+        def call() -> str:
+            return handler.handle(request)
+
+        # Wrap each behavior around the handler; the first registered runs outermost.
+        for behavior in reversed(behaviors):
+            call_next = call
+
+            def call(behavior=behavior, call_next=call_next) -> str:
+                return behavior.process(request, call_next)
+
+        return call()
+
+
 container = Container()
-
-# Register behaviors and handler
-container.add_transient(IPipelineBehavior, LoggingBehavior)
-container.add_transient(IPipelineBehavior, AuthorizationBehavior)
-container.add_transient(IRequestHandler, MyRequestHandler)
-
-# Register the mediator
+container.add_transient(Behavior, LoggingBehavior)
+container.add_transient(Behavior, AuthorizationBehavior)
+container.add_transient(Handler, EchoHandler)
 container.add_singleton(Mediator)
 
-import asyncio
-
-async def main():
-    # Resolve the mediator
-    mediator = container.resolve(Mediator)
-
-    # Send a request
-    response = await mediator.send(MyRequest(data="Important Task"))
-    print(response)
-
-asyncio.run(main())
-
+mediator = container.resolve(Mediator)
+print(mediator.send(Request("Important Task")))
+```
 
 Output:
-Logging: <__main__.MyRequest object at 0x...>
+
+```text
+Logging: Important Task
 Authorizing request
-Handling request: Important Task
+Handling: Important Task
 Processed: Important Task
 ```
+
+This shows `resolve_all()` returning every registered `Behavior`, an injected
+container (the unannotated `container` parameter), and a singleton `Mediator`
+composing transient behaviors around the handler.
 
 ### Creating an API Service with Database Integration
 
