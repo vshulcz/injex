@@ -63,25 +63,25 @@
           large provider framework.
         </p>
 
-        <h2>Use Injex when you want</h2>
+        <h2>Where Injex loses</h2>
+        <p>Pick a larger framework when you need any of these — Injex deliberately
+          doesn't do them:</p>
         <ul>
-          <li>explicit registrations;</li>
-          <li>constructor injection from type hints;</li>
-          <li>singleton, transient, and scoped lifetimes;</li>
-          <li>temporary test overrides;</li>
-          <li>startup graph validation;</li>
-          <li>zero runtime dependencies;</li>
-          <li>low overhead for repeated resolves in small service graphs.</li>
+          <li><strong>Async resource lifecycle.</strong> Containers like
+            <code>dependency-injector</code> and Dishka open and close async resources
+            (connection pools, <code>async with</code>) as part of resolution. Injex
+            resolves objects; you manage async resource lifetimes yourself or via your
+            framework's lifespan.</li>
+          <li><strong>A configuration/provider DSL.</strong> If wiring config values
+            through provider objects is part of your architecture,
+            <code>dependency-injector</code> is purpose-built for it.</li>
+          <li><strong>Deep framework auto-wiring.</strong> Dishka and Wireup plug
+            directly into FastAPI or task-framework scopes and inject into handler
+            signatures. Injex stays at the composition root and lets the framework
+            adapt the graph at its edge.</li>
         </ul>
-
-        <h2>Use a larger DI framework when you want</h2>
-        <ul>
-          <li>a provider DSL as a first-class architecture tool;</li>
-          <li>advanced configuration injection;</li>
-          <li>framework integrations that own handler/task wiring;</li>
-          <li>async resource orchestration built into the container;</li>
-          <li>a broad ecosystem of container-specific features.</li>
-        </ul>
+        <p>For the general manual-vs-framework-vs-Injex decision, see the
+          <a href="./comparison.html">comparison guide</a>.</p>
 
         <h2>Dependency Injector</h2>
         <p>
@@ -104,13 +104,6 @@
           Injex keeps the boundary more conservative: build the app graph at the
           composition root, then let FastAPI, Typer, and workers adapt that graph
           at their edge.
-        </p>
-
-        <h2>Manual wiring</h2>
-        <p>
-          Manual wiring remains the best default for small apps. Move to Injex
-          only when the same graph starts repeating across API startup, CLI
-          commands, workers, and tests.
         </p>
 
         <p class="callout">
