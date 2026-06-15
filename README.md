@@ -1,157 +1,24 @@
 # Injex
 
-[![Build Status](https://github.com/vshulcz/injex/actions/workflows/ci.yml/badge.svg)](https://github.com/vshulcz/injex/actions/workflows/ci.yml)
-[![pypi](https://img.shields.io/pypi/v/injex.svg)](https://pypi.python.org/pypi/injex)
-[![Docs](https://img.shields.io/badge/docs-vshulcz.github.io%2Finjex-blue)](https://vshulcz.github.io/injex/)
+[![Build](https://github.com/vshulcz/injex/actions/workflows/ci.yml/badge.svg)](https://github.com/vshulcz/injex/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/injex.svg)](https://pypi.org/project/injex/)
+[![Downloads](https://static.pepy.tech/badge/injex/month)](https://pepy.tech/project/injex)
 [![Coverage](https://codecov.io/gh/vshulcz/injex/branch/main/graph/badge.svg)](https://codecov.io/gh/vshulcz/injex)
-[![Python Versions](https://img.shields.io/badge/python-3.10%20|%203.11%20|%203.12%20|%203.13%20|%203.14-blue)](https://github.com/vshulcz/injex)
-[![License](https://img.shields.io/github/license/vshulcz/injex.svg)](https://github.com/vshulcz/injex/blob/main/LICENSE)
+[![Python](https://img.shields.io/badge/python-3.10%E2%80%933.14-blue)](https://pypi.org/project/injex/)
+[![License](https://img.shields.io/github/license/vshulcz/injex.svg)](./LICENSE)
 
-Tiny typed dependency injection for Python apps that want explicit wiring without
-a framework-sized container.
+**Tiny typed dependency injection for Python that catches missing dependencies and
+cycles _before_ your app starts — with zero runtime dependencies.**
 
-Injex is for the point where manual constructor calls are still readable in one
-place, but start repeating across an API, a worker, a CLI, and tests. It keeps
-wiring explicit: normal type hints, zero runtime dependencies, scoped lifetimes,
-test overrides, and graph validation before your app starts.
+You wire one service graph at startup, validate it in a single call, then reuse it
+from FastAPI, Typer, workers, scripts, and tests. Application classes stay plain:
+normal constructors, normal type hints, no decorators.
+
+![Injex validates the dependency graph before startup](https://raw.githubusercontent.com/vshulcz/injex/main/site/assets/validate-demo.png)
 
 ```bash
 pip install injex
 ```
-
-Website: [vshulcz.github.io/injex](https://vshulcz.github.io/injex/)
-
-## How it fits
-
-Define one validated service graph at the composition root, then let every
-entrypoint resolve from it instead of re-wiring its own copy.
-
-```mermaid
-flowchart LR
-  subgraph root["Composition root — one validated graph"]
-    direction LR
-    S[Settings] --> C[ApiClient]
-    C --> R[UserRepository]
-    C --> E[EmailSender]
-    R --> U[RegisterUser]
-    E --> U
-  end
-  root --> API[FastAPI]
-  root --> CLI[Typer CLI]
-  root --> WK[Worker]
-  root --> TS[Tests]
-```
-
-## The problem it solves
-
-Without a composition root, the same object graph often leaks into every
-entrypoint:
-
-```python
-repo = UserRepository(settings.database_url)
-mailer = EmailSender(settings.smtp_url)
-use_case = RegisterUser(repo, mailer)
-```
-
-That is fine once. It becomes harder to maintain when the API, background jobs,
-CLI commands, and tests all need the same graph with small differences.
-
-With Injex, application code keeps normal constructors and startup code owns the
-wiring:
-
-```python
-container = Container()
-container.add_instance(Settings, settings)
-container.add_singleton(UserRepository)
-container.add_singleton(EmailSender)
-container.add_transient(RegisterUser)
-
-container.assert_valid()
-
-use_case = container.resolve(RegisterUser)
-```
-
-Tests can replace one dependency without changing production registrations:
-
-```python
-with container.override(EmailSender, instance=fake_mailer):
-    use_case = container.resolve(RegisterUser)
-```
-
-## Use Injex when
-
-- you have a service layer reused by an API, CLI, worker, and tests;
-- constructors already describe dependencies with type hints;
-- test doubles should replace external services without changing production wiring;
-- startup should catch missing registrations before the first request or job.
-
-## Skip Injex when
-
-- a few manual constructor calls are still clear enough;
-- your framework dependency system already covers every entrypoint;
-- you need a large provider/configuration DSL.
-
-## Why Injex?
-
-- **Zero dependencies**: pure Python, easy to vendor, audit, and run anywhere.
-- **Typed constructor injection**: dependencies are resolved from annotations.
-- **Framework-agnostic**: use the same wiring in web apps, workers, CLIs, and
-  tests.
-- **Production lifetimes**: singleton, transient, and scoped services.
-- **Factories and instances**: use custom creation logic or prebuilt objects.
-- **Named registrations**: register multiple implementations of the same type.
-- **Optional dependencies**: `Optional[T]` works without special configuration.
-- **Test overrides**: swap real services for fakes in a small, explicit scope.
-- **Container validation**: catch missing annotations, missing registrations, and
-  dependency cycles before your app starts.
-- **Fast hot-path resolution**: cached dependency plans keep repeated resolves
-  close to manual wiring for small service graphs.
-
-## Performance snapshot
-
-Injex compiles and caches simple dependency plans, then uses a fast path
-for common constructor-injection graphs. In a small synthetic graph with a
-singleton `Settings`, singleton `ApiClient`, and transient repository/service
-objects, Injex resolves faster than several popular Python DI containers on this
-machine.
-
-| Library | Median resolve time |
-| --- | ---: |
-| manual wiring | `0.271 µs/op` |
-| Injex | `0.401 µs/op` |
-| Wireup, same scope | `0.910 µs/op` |
-| Wireup, scope per operation | `1.605 µs/op` |
-| dependency-injector | `1.776 µs/op` |
-| lagom | `10.392 µs/op` |
-| punq | `59.662 µs/op` |
-
-Benchmarks are synthetic and not a universal ranking. They are included to show
-the approximate overhead of Injex in its target shape: small explicit service
-graphs reused by APIs, workers, CLIs, and tests.
-
-Reproduce locally:
-
-```bash
-uv run --with punq --with lagom --with dependency-injector --with wireup \
-  python benchmarks/resolve_graph.py
-```
-
-## Where it fits
-
-Injex is useful when manual wiring starts to spread across your entrypoints, but
-`providers`, global state, or a framework-specific container would be too much.
-
-Common patterns:
-
-- **Service layer**: wire repositories, gateways, clients, and use cases once at
-  startup.
-- **CLIs**: share configuration, API clients, and commands without module-level
-  singletons.
-- **Workers**: create one scope per job or message while reusing long-lived
-  clients.
-- **Tests**: override slow or external dependencies inside one `with` block.
-- **Clean architecture**: keep application code depending on interfaces instead
-  of framework-specific dependency hooks.
 
 ## Quick start
 
@@ -185,157 +52,158 @@ container.add_singleton(UserRepository)
 container.add_singleton(EmailSender)
 container.add_transient(RegisterUser)
 
-container.assert_valid()
+container.assert_valid()  # fail fast if the graph is incomplete
 
-use_case = container.resolve(RegisterUser)
-user_id = use_case.execute("ada@example.com")
+container.resolve(RegisterUser).execute("ada@example.com")
 ```
 
-## Validate wiring before startup
+## What makes it different
 
-`validate()` checks the registered dependency graph without constructing your
-services. That makes it safe for startup checks and CI smoke tests.
+Most small DI containers stop at "resolve a graph." Injex's distinctive feature is
+that it can **check the whole graph without constructing anything**, so missing
+registrations, missing annotations, and cycles surface at startup or in CI — not on
+the first request or background job.
 
 ```python
-errors = container.validate()
-
-if errors:
-    for error in errors:
-        print(error)
-    raise SystemExit(1)
+errors = container.validate()       # list of problems, nothing constructed
+container.assert_valid()            # or raise with all of them at once
 ```
 
-Use `assert_valid()` when you prefer a single exception with all validation
-errors.
+That makes it safe to run as a startup guard even when real constructors open
+sockets or files.
 
-## Testing with overrides
-
-Use `override()` to replace a dependency only inside a `with` block.
+## Lifetimes, overrides, scopes
 
 ```python
-class FakeEmailSender:
-    def __init__(self):
-        self.sent_to = []
+container.add_singleton(ApiClient)     # one instance for the app lifetime
+container.add_transient(UseCase)       # a new instance per resolve
+container.add_scoped(RequestContext)   # one instance per scope (request/job)
 
-    def send_welcome(self, email: str) -> None:
-        self.sent_to.append(email)
-
-
-fake_sender = FakeEmailSender()
-
+# Swap a dependency inside a test, restored automatically on exit:
 with container.override(EmailSender, instance=fake_sender):
-    use_case = container.resolve(RegisterUser)
-    use_case.execute("test@example.com")
-
-assert fake_sender.sent_to == ["test@example.com"]
+    container.resolve(RegisterUser).execute("test@example.com")
 ```
 
-## Scopes for request-style lifetimes
+See the [tutorial](./docs/tutorial.md) for factories, named registrations,
+`resolve_all()`, optional dependencies, and property injection.
 
-Scoped services are reused inside one scope and recreated for another scope.
+## When to use it
 
-```python
-from injex import Container
+- A service layer reused by an API, CLI, worker, and tests, where copy-pasted
+  wiring drifts out of sync.
+- You want a missing or cyclic dependency to fail at startup, not at 3 AM.
+- Tests should replace one real service with a fake without touching production
+  wiring.
 
+**When not to:** a handful of constructor calls in one entrypoint is clearer with
+plain manual wiring — reach for Injex when that wiring starts repeating.
 
-class RequestContext:
-    pass
+## Where it doesn't fit (yet)
 
+- **No async resource lifecycle.** Injex resolves objects; it doesn't open/close
+  async resources (`async with`, connection pools) for you. Manage those yourself or
+  with your framework's lifespan.
+- **No provider/config DSL.** If you want a rich configuration-injection system,
+  `dependency-injector` is a better fit.
+- **No deep framework auto-wiring.** Injex owns the graph; FastAPI/Typer adapt it at
+  their edge — it won't inject into route signatures for you.
 
-container = Container()
-container.add_scoped(RequestContext)
+## Performance
 
-scope_a = container.create_scope()
-scope_b = container.create_scope()
+Injex compiles and caches a flat creator per service graph. On a small synthetic
+graph (singleton config + client, transient repository/service/use-case) it resolves
+faster than several popular containers on the same machine:
 
-assert scope_a.resolve(RequestContext) is scope_a.resolve(RequestContext)
-assert scope_a.resolve(RequestContext) is not scope_b.resolve(RequestContext)
+| Library | Median resolve time |
+| --- | ---: |
+| manual wiring | `0.271 µs/op` |
+| **Injex** | **`0.401 µs/op`** |
+| Wireup, same scope | `0.910 µs/op` |
+| dependency-injector | `1.776 µs/op` |
+| lagom | `10.392 µs/op` |
+| punq | `59.662 µs/op` |
+
+This is synthetic and graph-specific — **not** a universal ranking. Reproduce it:
+
+```bash
+uv run --with punq --with lagom --with dependency-injector --with wireup \
+  python benchmarks/resolve_graph.py
 ```
 
-## Feature comparison
+See [performance notes](./docs/performance.md) for the full table and method.
+
+## How it fits
+
+One validated graph at the composition root; every entrypoint resolves from it.
+
+```mermaid
+flowchart LR
+  subgraph root["Composition root — one validated graph"]
+    direction LR
+    S[Settings] --> C[ApiClient]
+    C --> R[UserRepository]
+    C --> E[EmailSender]
+    R --> U[RegisterUser]
+    E --> U
+  end
+  root --> API[FastAPI]
+  root --> CLI[Typer CLI]
+  root --> WK[Worker]
+  root --> TS[Tests]
+```
+
+## How it compares
 
 | Feature | Injex | dependency-injector | punq | lagom |
 | --- | ---: | ---: | ---: | ---: |
 | Zero runtime dependencies | ✅ | ❌ | ✅ | ✅ |
 | Type-hint constructor injection | ✅ | ✅ | ✅ | ✅ |
-| Singleton / transient lifetimes | ✅ | ✅ | ✅ | ✅ |
-| Scoped lifetime | ✅ | ✅ | ❌ | ✅ |
+| Singleton / transient / scoped | ✅ | ✅ | partial | ✅ |
 | Named registrations | ✅ | ✅ | ❌ | ✅ |
 | Property injection | ✅ | ❌ | ❌ | ❌ |
 | Temporary test overrides | ✅ | ✅ | ❌ | ✅ |
-| Graph validation without object creation | ✅ | ❌ | ❌ | ❌ |
-| Small API surface | ✅ | ❌ | ✅ | ✅ |
+| **Graph validation without constructing services** | ✅ | ❌ | ❌ | ❌ |
 
-This table is not a benchmark. It shows the niche: Injex aims to be small and
-explicit while still covering common application wiring needs.
-
-## Documentation and examples
-
-- [Docs site](https://vshulcz.github.io/injex/)
-- [Docs index](./docs/index.md)
-- [Tutorial](./docs/tutorial.md)
-- [Validation guide](./docs/validation.md)
-- [Why Injex](./docs/why-injex.md)
-- [Comparison guide](./docs/comparison.md)
-- [Compared to FastAPI Depends](./docs/fastapi-depends.md)
-- [Compared to larger DI frameworks](./docs/di-frameworks.md)
-- [Performance notes](./docs/performance.md)
-- [Recipes](./docs/recipes.md)
-- [Migrating from a factories module](./docs/migrating-from-factories.md)
-- [Usage scenarios](./docs/usage-scenarios.md)
-- [API reference](./docs/api.md)
-- [Article: When Python manual wiring turns into copy-paste architecture](https://vshulcz.hashnode.dev/when-python-manual-wiring-turns-into-copy-paste-architecture)
-- [Article: Where should dependency wiring live in a Python app?](https://vshulcz.hashnode.dev/where-should-dependency-wiring-live-in-a-python-app)
-- [DEV: Fast dependency injection in Python without a provider framework](https://dev.to/vshulcz/fast-dependency-injection-in-python-without-a-provider-framework-3dko)
-- [X launch post](https://x.com/vshulcz_dev/status/2064249921570533567?s=20)
-- [X project thread](https://x.com/vshulcz_dev/status/2059720295536009683?s=20)
-- [Clean architecture example](./examples/clean_architecture.py)
-- [CLI application example](./examples/cli_app.py)
-- [FastAPI application service example](./examples/fastapi_app.py)
-- [FastAPI lifespan composition root example](./examples/fastapi_lifespan.py)
-- [Testing overrides example](./examples/testing.py)
-- [Scoped lifetime example](./examples/scoped.py)
-- [Factories example](./examples/factory.py)
-- [Named registrations example](./examples/named.py)
-- [Benchmark source and notes](./benchmarks/README.md)
+For a deeper, fair comparison see [Injex vs other DI options](./docs/comparison.md).
 
 ## API at a glance
 
 | Method | Use when |
 | --- | --- |
-| `add_singleton(T, Impl)` | One instance should be reused for the app lifetime. |
-| `add_transient(T, Impl)` | A new instance should be created on every resolve. |
-| `add_scoped(T, Impl)` | One instance should be reused inside one scope. |
+| `add_singleton(T, Impl)` | One instance reused for the app lifetime. |
+| `add_transient(T, Impl)` | A new instance on every resolve. |
+| `add_scoped(T, Impl)` | One instance reused inside one scope. |
 | `add_*_factory(T, factory)` | Construction needs custom code. |
-| `add_instance(T, instance)` | You already have the object to use. |
-| `resolve(T)` | Resolve one service from the root container. |
-| `resolve_all(T)` | Resolve all unnamed implementations for a type. |
+| `add_instance(T, instance)` | You already have the object. |
+| `resolve(T)` / `resolve_all(T)` | Resolve one, or all unnamed implementations. |
 | `create_scope()` | Start a request, job, or message lifetime. |
 | `override(T, ...)` | Temporarily replace a dependency in tests. |
 | `validate()` / `assert_valid()` | Check wiring before startup. |
 
-## Common use cases
+## Documentation
 
-- Service-layer wiring in web APIs without coupling code to a web framework.
-- Clean architecture use cases with repositories, gateways, and presenters.
-- CLI tools where commands share configuration, clients, and services.
-- Background workers and consumers with per-job or per-message scopes.
-- Unit tests that need explicit dependency replacement.
-
-## Contributors
-
-Thanks to the people improving Injex through issues, reviews, and pull requests:
-
-- [Muhammad Saqib Atif](https://github.com/msaqibatifj) — FastAPI example.
-- [mahek](https://github.com/mahek56) — `resolve_all()` documentation recipe.
-- [oppnc](https://github.com/oppnc) — nested override regression tests.
-- [YuuGR1337](https://github.com/YuuGR1337) — README article link.
+- [Docs site](https://vshulcz.github.io/injex/) · [Tutorial](./docs/tutorial.md) ·
+  [API reference](./docs/api.md)
+- [Validation guide](./docs/validation.md) ·
+  [Comparison](./docs/comparison.md) ·
+  [vs FastAPI Depends](./docs/fastapi-depends.md)
+- [Recipes](./docs/recipes.md) ·
+  [Migrating from a factories module](./docs/migrating-from-factories.md) ·
+  [Performance](./docs/performance.md)
+- Examples:
+  [clean architecture](./examples/clean_architecture.py),
+  [FastAPI lifespan](./examples/fastapi_lifespan.py),
+  [CLI](./examples/cli_app.py),
+  [testing](./examples/testing.py),
+  [scopes](./examples/scoped.py)
 
 ## Contributing
 
-Contributions are welcome when they keep the API small, tested, and practical.
-Useful changes usually improve documentation, typing, examples, or narrow edge
-cases without adding runtime dependencies.
+Contributions are welcome when they keep the API small, tested, and dependency-free.
+Useful changes usually improve documentation, typing, examples, or narrow edge cases.
+See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for the local setup and contribution
-guidelines.
+Thanks to [Muhammad Saqib Atif](https://github.com/msaqibatifj),
+[mahek](https://github.com/mahek56),
+[oppnc](https://github.com/oppnc), and
+[YuuGR1337](https://github.com/YuuGR1337) for improving Injex.
