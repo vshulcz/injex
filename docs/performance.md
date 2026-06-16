@@ -26,23 +26,28 @@ Environment used for the project benchmark:
 - macOS arm64;
 - `injex 1.4.0`;
 - `wireup 2.11.1`;
+- `dishka 1.10.1`;
 - `dependency-injector 4.49.0`;
 - `lagom 2.7.7`;
 - `punq 0.7.0`.
 
 | Library | Median resolve time |
 | --- | ---: |
-| manual wiring | `0.271 µs/op` |
-| Injex | `0.401 µs/op` |
-| Wireup, same scope | `0.910 µs/op` |
-| Wireup, scope per operation | `1.605 µs/op` |
-| dependency-injector | `1.776 µs/op` |
-| lagom | `10.392 µs/op` |
-| punq | `59.662 µs/op` |
+| manual wiring | `0.264 µs/op` |
+| Injex | `0.407 µs/op` |
+| dishka | `0.755 µs/op` |
+| Wireup, same scope | `0.935 µs/op` |
+| Wireup, scope per operation | `1.559 µs/op` |
+| dependency-injector | `1.721 µs/op` |
+| lagom | `10.010 µs/op` |
+| punq | `58.786 µs/op` |
 
 These numbers are not a universal ranking. They are a small synthetic benchmark
 for one graph shape. Different lifetimes, framework integrations, factories,
-async resources, and request context models can change results.
+async resources, and request context models can change results. dishka in
+particular is measured here on a synchronous graph; its async-resource and
+scope features are not exercised, so treat its number as "this graph," not
+"dishka in general."
 
 ## Reproduce
 
