@@ -59,3 +59,24 @@ services.register_user.execute("ada@example.com")
 The rule of thumb: FastAPI adapts HTTP; the application owns service wiring.
 
 See also: [`examples/fastapi_lifespan.py`](../examples/fastapi_lifespan.py).
+
+
+
+## Dependency wrapper recipe
+
+When a FastAPI route needs an application service from Injex, keep the container access inside a small dependency wrapper instead of resolving directly in the route.
+
+```python
+from fastapi import APIRouter, Depends, Request
+
+router = APIRouter()
+
+def get_register_user(request: Request) -> RegisterUser:
+    return request.app.state.services.container.resolve(RegisterUser)
+
+@router.post("/register")
+def register_user(
+    email: str,
+    use_case: RegisterUser = Depends(get_register_user),
+) -> int:
+    return use_case.execute(email)
