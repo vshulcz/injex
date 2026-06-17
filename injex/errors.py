@@ -32,6 +32,16 @@ class InvalidLifestyleException(DIException):
         )
 
 
+class PropertyInjectionException(DIException):
+    def __init__(self, cls: Type, name: str):
+        super().__init__(
+            f"Cannot inject property '{name}' on '{getattr(cls, '__name__', cls)}': "
+            "the type uses __slots__ or is a frozen dataclass, so attributes "
+            "cannot be set after construction. Use constructor injection for "
+            "this dependency instead."
+        )
+
+
 @dataclass(frozen=True)
 class ValidationError:
     service: Union[Type, str]

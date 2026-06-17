@@ -7,6 +7,14 @@ and this project uses semantic versioning.
 
 ## [Unreleased]
 
+### Added
+
+- `PropertyInjectionException` with a clear message when property injection
+  (`@inject` methods) targets a `__slots__` type or a frozen dataclass, instead
+  of a raw `AttributeError` / `FrozenInstanceError`. Constructor injection into
+  such types already worked (the compiled path calls the constructor directly and
+  never sets attributes) and is unaffected; the hot path is untouched.
+
 ## [1.4.0] - 2026-06-12
 
 ### Changed

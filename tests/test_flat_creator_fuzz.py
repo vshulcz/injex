@@ -14,6 +14,8 @@ defaulted parameters.
 import random
 import typing
 
+import pytest
+
 from injex import Container
 
 _LEAF = object()
@@ -230,3 +232,64 @@ def test_flat_creator_declines_property_injection():
     resolved = c.resolve(Service)
     assert isinstance(resolved.dep, Dep)
     assert c._registrations[(Service, None)][0].fast_creator is None
+
+
+def test_constructor_injection_works_with_slots_and_frozen():
+    import dataclasses
+
+    class Settings:
+        pass
+
+    class Client:
+        __slots__ = ("settings",)
+
+        def __init__(self, settings: Settings):
+            self.settings = settings
+
+    @dataclasses.dataclass(frozen=True)
+    class Service:
+        client: Client
+
+    c = Container()
+    c.add_instance(Settings, Settings())
+    c.add_singleton(Client)  # __slots__ class
+    c.add_transient(Service)  # frozen dataclass
+
+    s = c.resolve(Service)
+    assert isinstance(s.client, Client)
+    # Constructor injection must still take the compiled flat path here.
+    assert c._registrations[(Service, None)][0].fast_creator.__name__ == "_flat"
+
+
+def test_property_injection_on_frozen_or_slots_raises_clear_error():
+    import dataclasses
+
+    from injex import PropertyInjectionException, inject
+
+    class Dep:
+        pass
+
+    @dataclasses.dataclass(frozen=True)
+    class FrozenService:
+        @inject
+        def dep(self) -> Dep:
+            return Dep()
+
+    c = Container()
+    c.add_singleton(Dep)
+    c.add_transient(FrozenService)
+    with pytest.raises(PropertyInjectionException):
+        c.resolve(FrozenService)
+
+    class SlotsService:
+        __slots__ = ()
+
+        @inject
+        def dep(self) -> Dep:
+            return Dep()
+
+    c2 = Container()
+    c2.add_singleton(Dep)
+    c2.add_transient(SlotsService)
+    with pytest.raises(PropertyInjectionException):
+        c2.resolve(SlotsService)

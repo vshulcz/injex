@@ -20,6 +20,7 @@ from .errors import (
     CyclicDependencyException,
     InvalidLifestyleException,
     MissingTypeAnnotationException,
+    PropertyInjectionException,
     ServiceNotRegisteredException,
     ValidationError,
     _describe_service,
@@ -854,8 +855,11 @@ class Container:
         scope: Scope,
         property_dependencies: Tuple[_DependencyPlan, ...],
     ) -> None:
+        # `__dict__` is absent on __slots__ types; getattr keeps the
+        # "already set?" check working without raising on those.
+        existing = getattr(instance, "__dict__", None)
         for dependency_plan in property_dependencies:
-            if dependency_plan.name in instance.__dict__:
+            if existing is not None and dependency_plan.name in existing:
                 continue
             dependency_type = dependency_plan.dependency_type
             if dependency_type in self._resolving:
@@ -865,7 +869,14 @@ class Container:
                 dependency_plan, scope, type(instance)
             )
 
-            setattr(instance, dependency_plan.name, dependency)
+            try:
+                setattr(instance, dependency_plan.name, dependency)
+            except AttributeError as exc:
+                # __slots__ without the slot, or a frozen dataclass
+                # (FrozenInstanceError subclasses AttributeError).
+                raise PropertyInjectionException(
+                    type(instance), dependency_plan.name
+                ) from exc
 
     def _create_service_from_registration(
         self, registration: Registration, scope: Scope
@@ -904,8 +915,9 @@ class Container:
         return factory(*args)
 
     def _inject_properties(self, instance: object, scope: Scope) -> None:
+        existing = getattr(instance, "__dict__", None)
         for dependency_plan in _cached_property_dependencies(cast(Any, type(instance))):
-            if dependency_plan.name in instance.__dict__:
+            if existing is not None and dependency_plan.name in existing:
                 continue
             dependency_type = dependency_plan.dependency_type
             if dependency_type in self._resolving:
@@ -915,7 +927,12 @@ class Container:
                 dependency_plan, scope, type(instance)
             )
 
-            setattr(instance, dependency_plan.name, dependency)
+            try:
+                setattr(instance, dependency_plan.name, dependency)
+            except AttributeError as exc:
+                raise PropertyInjectionException(
+                    type(instance), dependency_plan.name
+                ) from exc
 
     def _create_instance(self, cls: Type, scope: Scope) -> Any:
         if cls in self._resolving:
