@@ -11,10 +11,12 @@ from typing import (
     Set,
     Tuple,
     Type,
+    TypeVar,
     Union,
     cast,
     get_args,
     get_origin,
+    overload,
 )
 
 from .errors import (
@@ -46,6 +48,8 @@ from .registry import LifeStyle, OverrideContext, Registration, RegistrationType
 
 _MISSING = object()
 
+T = TypeVar("T")
+
 
 class _NotFlat(Exception):
     """Raised internally when a graph cannot be compiled to a flat creator."""
@@ -58,12 +62,24 @@ class Scope:
         self.container = container
         self._scoped_instances: Dict[Any, Any] = {}
 
+    @overload
+    def resolve(self, interface: type[T], name: Optional[str] = None) -> T: ...
+    @overload
+    def resolve(self, interface: str, name: Optional[str] = None) -> Any: ...
     def resolve(self, interface: Union[Type, str], name: Optional[str] = None) -> Any:
+        """Resolve one service from this scope."""
         return self.container._resolve_one(interface, self, name)
 
+    @overload
+    def resolve_all(
+        self, interface: type[T], name: Optional[str] = None
+    ) -> List[T]: ...
+    @overload
+    def resolve_all(self, interface: str, name: Optional[str] = None) -> List[Any]: ...
     def resolve_all(
         self, interface: Union[Type, str], name: Optional[str] = None
     ) -> List[Any]:
+        """Resolve all unnamed implementations registered for a type."""
         return self.container._resolve_in_scope(interface, self, name)
 
 
@@ -84,9 +100,14 @@ class AsyncScope:
     async def __aexit__(self, exc_type: Any, exc: Any, traceback: Any) -> None:
         await self._stack.aclose()
 
+    @overload
+    async def aresolve(self, interface: type[T], name: Optional[str] = None) -> T: ...
+    @overload
+    async def aresolve(self, interface: str, name: Optional[str] = None) -> Any: ...
     async def aresolve(
         self, interface: Union[Type, str], name: Optional[str] = None
     ) -> Any:
+        """Resolve one service from this async scope (awaits async factories)."""
         return await self.container._aresolve_one(interface, self, name, set())
 
 
@@ -143,6 +164,8 @@ class Container:
         lifestyle: str = LifeStyle.TRANSIENT,
         name: Optional[str] = None,
     ) -> None:
+        """Register a class. ``implementation`` defaults to ``interface``.
+        Dependencies are read from the constructor's type hints."""
         if lifestyle not in (
             LifeStyle.TRANSIENT,
             LifeStyle.SINGLETON,
@@ -167,6 +190,9 @@ class Container:
         lifestyle: str = LifeStyle.TRANSIENT,
         name: Optional[str] = None,
     ) -> None:
+        """Register a callable that builds the service. The factory's own
+        parameters are injected. Coroutine factories and async generators
+        (``async def ... yield``) are supported via aresolve()/ascope()."""
         if not callable(factory):
             raise ValueError("Factory must be callable")
         if lifestyle not in (
@@ -187,6 +213,7 @@ class Container:
     def add_instance(
         self, interface: Type, instance: Any, name: Optional[str] = None
     ) -> None:
+        """Register an already-built object. Resolves return it as-is."""
         key = (interface, name)
         registration = Registration(
             kind=RegistrationType.INSTANCE,
@@ -206,6 +233,8 @@ class Container:
         lifestyle: str = LifeStyle.TRANSIENT,
         name: Optional[str] = None,
     ) -> OverrideContext:
+        """Temporarily replace a registration; returns a context manager that
+        restores the previous one on exit. Handy for tests."""
         provided = sum(
             value is not None for value in (implementation, factory, instance)
         )
@@ -256,7 +285,13 @@ class Container:
                 removed[instance_key] = self._singletons.pop(instance_key)
         return removed
 
+    @overload
+    def resolve(self, interface: type[T], name: Optional[str] = None) -> T: ...
+    @overload
+    def resolve(self, interface: str, name: Optional[str] = None) -> Any: ...
     def resolve(self, interface: Union[Type, str], name: Optional[str] = None) -> Any:
+        """Resolve one service. Raises AsyncResolutionRequiredException if the
+        graph needs async work — use aresolve()/ascope() then."""
         if name is None:
             creator = self._noscope_creators.get(interface, _MISSING)
             if creator is _MISSING:
@@ -296,13 +331,22 @@ class Container:
         scope = self.create_scope()
         return self._resolve_one(interface, scope, name)
 
+    @overload
+    def resolve_all(
+        self, interface: type[T], name: Optional[str] = None
+    ) -> List[T]: ...
+    @overload
+    def resolve_all(self, interface: str, name: Optional[str] = None) -> List[Any]: ...
     def resolve_all(
         self, interface: Union[Type, str], name: Optional[str] = None
     ) -> List[Any]:
+        """Resolve all unnamed implementations registered for a type."""
         scope = self.create_scope()
         return scope.resolve_all(interface, name)
 
     def create_scope(self) -> Scope:
+        """Open a sync scope. Scoped services are cached per-scope; for async
+        resources use ``async with container.ascope()`` instead."""
         return Scope(self)
 
     def validate(self) -> List[ValidationError]:
@@ -908,16 +952,32 @@ class Container:
         resolved inside are finalized when the block exits."""
         return AsyncScope(self)
 
+    @overload
+    async def aresolve(self, interface: type[T], name: Optional[str] = None) -> T: ...
+    @overload
+    async def aresolve(self, interface: str, name: Optional[str] = None) -> Any: ...
     async def aresolve(
         self, interface: Union[Type, str], name: Optional[str] = None
     ) -> Any:
         """Resolve a service through the async path (awaits async factories).
 
-        Convenience wrapper that opens a short-lived scope. Any scoped/transient
-        async *resource* opened here is finalized on return, so for resources you
-        want to keep open, resolve inside ``async with container.ascope()``.
-        Singleton resources live until ``await container.aclose()``.
+        Convenience wrapper that opens a short-lived scope. Singleton resources
+        live until ``await container.aclose()``; scoped/transient resources must
+        be resolved inside ``async with container.ascope()`` instead, since the
+        short-lived scope here would finalize them before you could use them.
         """
+        registrations = self._registrations.get((interface, name))
+        if registrations:
+            registration = registrations[0]
+            if registration.is_resource and registration.lifestyle in (
+                LifeStyle.TRANSIENT,
+                LifeStyle.SCOPED,
+            ):
+                raise ValueError(
+                    f"{interface} is a {registration.lifestyle} async resource; "
+                    "aresolve() would finalize it immediately. Resolve it inside "
+                    "'async with container.ascope() as scope: await scope.aresolve(...)'."
+                )
         async with self.ascope() as scope:
             return await scope.aresolve(interface, name)
 
@@ -1185,6 +1245,7 @@ class Container:
         implementation: Optional[Type] = None,
         name: Optional[str] = None,
     ) -> None:
+        """Register a class created once and shared (singleton)."""
         self.register(
             interface, implementation, lifestyle=LifeStyle.SINGLETON, name=name
         )
@@ -1195,6 +1256,7 @@ class Container:
         implementation: Optional[Type] = None,
         name: Optional[str] = None,
     ) -> None:
+        """Register a class created fresh on every resolve (transient)."""
         self.register(
             interface, implementation, lifestyle=LifeStyle.TRANSIENT, name=name
         )
@@ -1205,6 +1267,7 @@ class Container:
         implementation: Optional[Type] = None,
         name: Optional[str] = None,
     ) -> None:
+        """Register a class created once per scope (scoped)."""
         self.register(interface, implementation, lifestyle=LifeStyle.SCOPED, name=name)
 
     def add_singleton_factory(
@@ -1213,6 +1276,7 @@ class Container:
         factory: Callable[..., Any],
         name: Optional[str] = None,
     ) -> None:
+        """Register a factory whose result is built once and shared (singleton)."""
         self.register_factory(
             interface, factory, lifestyle=LifeStyle.SINGLETON, name=name
         )
@@ -1223,6 +1287,7 @@ class Container:
         factory: Callable[..., Any],
         name: Optional[str] = None,
     ) -> None:
+        """Register a factory invoked on every resolve (transient)."""
         self.register_factory(
             interface, factory, lifestyle=LifeStyle.TRANSIENT, name=name
         )
@@ -1233,4 +1298,6 @@ class Container:
         factory: Callable[..., Any],
         name: Optional[str] = None,
     ) -> None:
+        """Register a factory invoked once per scope (scoped). Async-generator
+        factories yield a scoped resource finalized when the scope exits."""
         self.register_factory(interface, factory, lifestyle=LifeStyle.SCOPED, name=name)
