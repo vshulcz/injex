@@ -203,6 +203,38 @@ def test_singleton_resource_reopens_after_aclose():
     asyncio.run(main())
 
 
+def test_aresolve_sync_graph_matches_sync_resolve():
+    # A graph with no factories at all has no async work; aresolve must return an
+    # equivalent object and share singletons with the sync resolve path.
+    c = Container()
+    settings = Settings()
+    c.add_instance(Settings, settings)
+
+    class ApiClient:
+        def __init__(self, s: Settings):
+            self.s = s
+
+    class Svc:
+        def __init__(self, client: ApiClient):
+            self.client = client
+
+    c.add_singleton(ApiClient)
+    c.add_transient(Svc)
+
+    async def run():
+        a = await c.aresolve(Svc)
+        async with c.ascope() as scope:
+            b = await scope.aresolve(Svc)
+        sync = c.resolve(Svc)
+        assert isinstance(a, Svc) and isinstance(b, Svc)
+        assert a is not b  # transient
+        # singleton ApiClient shared across aresolve, scope.aresolve, resolve
+        assert a.client is b.client is sync.client
+        assert a.client.s is settings
+
+    asyncio.run(run())
+
+
 def test_assert_valid_accepts_async_factories():
     async def make_settings() -> Settings:
         return Settings()
