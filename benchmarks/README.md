@@ -45,6 +45,30 @@ Environment:
 | lagom | `10.010 µs/op` |
 | punq | `58.786 µs/op` |
 
+## Async benchmark
+
+`resolve_async.py` measures the same graph through each library's async API, for
+two shapes: a synchronous graph resolved in an async context (the common FastAPI
+case of awaiting a resolve on plain classes), and a graph whose `Settings` is
+produced by an `async def` factory. Only libraries with a real async path are
+included.
+
+```bash
+uv run --with wireup --with dishka --with dependency-injector \
+  python benchmarks/resolve_async.py
+```
+
+Latest local result (Python `3.13.5`, macOS arm64; `injex 1.5.0`, `wireup 2.11.3`,
+`dishka 1.10.1`):
+
+| Library | Sync graph via async API | Graph with an async factory |
+| --- | ---: | ---: |
+| Injex | `0.441 µs/op` | `1.165 µs/op` |
+| dishka | `1.451 µs/op` | `1.503 µs/op` |
+| Wireup, scope per operation | `1.782 µs/op` | `2.094 µs/op` |
+
+Same caveats as below: synthetic, one graph shape, not a universal ranking.
+
 ## Interpretation
 
 This is not a universal DI ranking. It is a reproducible sanity check for one
