@@ -11,3 +11,6 @@ dist/
 coverage.xml
 htmlcov/
 *.log
+
+# local article drafts
+*-draft.md
