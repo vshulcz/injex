@@ -54,7 +54,7 @@ scope features are not exercised, so treat its number as "this graph," not
 Run from the repository root:
 
 ```bash
-uv run --with punq --with lagom --with dependency-injector --with wireup \
+uv run --with punq --with lagom --with dependency-injector --with wireup --with dishka \
   python benchmarks/resolve_graph.py
 ```
 

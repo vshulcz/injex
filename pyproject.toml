@@ -1,6 +1,6 @@
 [project]
 name = "injex"
-version = "1.4.0"
+version = "1.5.0"
 authors = [{name = "vshulcz", email = "vshulcz@gmail.com"}]
 description = "Tiny typed dependency injection for Python apps"
 readme = "README.md"

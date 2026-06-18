@@ -98,11 +98,33 @@ See the [tutorial](./docs/tutorial.md) for factories, named registrations,
 **When not to:** a handful of constructor calls in one entrypoint is clearer with
 plain manual wiring — reach for Injex when that wiring starts repeating.
 
+## Async
+
+Injex resolves async dependencies too. Register an `async def` factory or an
+async-generator resource and resolve it through `aresolve()` / `ascope()`:
+
+```python
+async def db_session(settings: Settings):  # async-generator resource
+    pool = await open_pool(settings.database_url)
+    try:
+        yield pool
+    finally:
+        await pool.aclose()  # finalized when the scope exits
+
+container.add_scoped_factory(Pool, db_session)
+
+async with container.ascope() as scope:
+    pool = await scope.aresolve(Pool)
+```
+
+Resources are finalized LIFO via the standard library's `AsyncExitStack` (still
+zero runtime deps). The sync `resolve()` raises `AsyncResolutionRequiredException`
+if the graph needs async work, so you never silently get an un-awaited object. See
+[async resolution](./docs/async.md) and the
+[FastAPI example](./examples/fastapi_async.py).
+
 ## Where it doesn't fit (yet)
 
-- **No async resource lifecycle.** Injex resolves objects; it doesn't open/close
-  async resources (`async with`, connection pools) for you. Manage those yourself or
-  with your framework's lifespan.
 - **No provider/config DSL.** If you want a rich configuration-injection system,
   `dependency-injector` is a better fit.
 - **No deep framework auto-wiring.** Injex owns the graph; FastAPI/Typer adapt it at
@@ -127,7 +149,7 @@ faster than several popular containers on the same machine:
 This is synthetic and graph-specific — **not** a universal ranking. Reproduce it:
 
 ```bash
-uv run --with punq --with lagom --with dependency-injector --with wireup \
+uv run --with punq --with lagom --with dependency-injector --with wireup --with dishka \
   python benchmarks/resolve_graph.py
 ```
 
