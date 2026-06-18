@@ -7,6 +7,23 @@ and this project uses semantic versioning.
 
 ## [Unreleased]
 
+### Added
+
+- Async resolution, sync-first and still zero-dependency. `await container.aresolve(T)`
+  and `async with container.ascope() as scope: await scope.aresolve(T)` await
+  `async def` factories and manage async resources: register an async-generator
+  factory (`async def f(...): ...; yield x; await cleanup()`) and the yielded value
+  is finalized when its scope exits (scoped/transient) or on `await container.aclose()`
+  (singleton), via a stdlib `AsyncExitStack`. The sync `resolve()` raises a clear
+  `AsyncResolutionRequiredException` if the graph needs async work. Cycle detection
+  on the async path uses a per-resolution guard (safe under concurrent resolves).
+  The synchronous fast path is untouched — same compiled creators, same ~0.4 µs/op.
+- `PropertyInjectionException` with a clear message when property injection
+  (`@inject` methods) targets a `__slots__` type or a frozen dataclass, instead
+  of a raw `AttributeError` / `FrozenInstanceError`. Constructor injection into
+  such types already worked (the compiled path calls the constructor directly and
+  never sets attributes) and is unaffected; the hot path is untouched.
+
 ## [1.4.0] - 2026-06-12
 
 ### Changed

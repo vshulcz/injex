@@ -1,12 +1,14 @@
 """Public package facade for Injex."""
 
-from .container import Container, Scope
+from .container import AsyncScope, Container, Scope
 from .errors import (
+    AsyncResolutionRequiredException,
     ContainerValidationException,
     CyclicDependencyException,
     DIException,
     InvalidLifestyleException,
     MissingTypeAnnotationException,
+    PropertyInjectionException,
     ServiceNotRegisteredException,
     ValidationError,
     _describe_service as _describe_service,
@@ -31,6 +33,8 @@ from .registry import (
 )
 
 __all__ = [
+    "AsyncResolutionRequiredException",
+    "AsyncScope",
     "Container",
     "ContainerValidationException",
     "CyclicDependencyException",
@@ -38,6 +42,7 @@ __all__ = [
     "InvalidLifestyleException",
     "LifeStyle",
     "MissingTypeAnnotationException",
+    "PropertyInjectionException",
     "Scope",
     "ServiceNotRegisteredException",
     "ValidationError",

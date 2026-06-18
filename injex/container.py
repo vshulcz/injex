@@ -1,5 +1,6 @@
 import inspect
 import types
+from contextlib import AsyncExitStack, asynccontextmanager
 from typing import (
     Any,
     Callable,
@@ -16,10 +17,12 @@ from typing import (
 )
 
 from .errors import (
+    AsyncResolutionRequiredException,
     ContainerValidationException,
     CyclicDependencyException,
     InvalidLifestyleException,
     MissingTypeAnnotationException,
+    PropertyInjectionException,
     ServiceNotRegisteredException,
     ValidationError,
     _describe_service,
@@ -63,6 +66,29 @@ class Scope:
         return self.container._resolve_in_scope(interface, self, name)
 
 
+class AsyncScope:
+    """Async resolution scope. Async resources opened inside it are finalized
+    (LIFO) when the scope exits."""
+
+    __slots__ = ("container", "_scoped_instances", "_stack")
+
+    def __init__(self, container: "Container"):
+        self.container = container
+        self._scoped_instances: Dict[Any, Any] = {}
+        self._stack = AsyncExitStack()
+
+    async def __aenter__(self) -> "AsyncScope":
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc: Any, traceback: Any) -> None:
+        await self._stack.aclose()
+
+    async def aresolve(
+        self, interface: Union[Type, str], name: Optional[str] = None
+    ) -> Any:
+        return await self.container._aresolve_one(interface, self, name, set())
+
+
 class Container:
     __slots__ = (
         "_registrations",
@@ -70,6 +96,7 @@ class Container:
         "_resolving",
         "_version",
         "_noscope_creators",
+        "_async_stack",
     )
 
     def __init__(self):
@@ -79,6 +106,9 @@ class Container:
         self._singletons: Dict[Any, Any] = {}
         self._resolving: Set[Type] = set()
         self._version = 0
+        # Lazily created AsyncExitStack holding singleton async resources;
+        # finalized by `await container.aclose()` at shutdown.
+        self._async_stack: Optional[AsyncExitStack] = None
         # Direct interface -> creator dispatch for the common name=None,
         # no-scope-needed case. Skips the per-resolve key-tuple allocation and
         # registration attribute reads. Value is None when the interface is not
@@ -132,6 +162,8 @@ class Container:
         registration = Registration(
             kind=RegistrationType.FACTORY, factory=factory, lifestyle=lifestyle
         )
+        registration.is_resource = inspect.isasyncgenfunction(factory)
+        registration.is_async = inspect.iscoroutinefunction(factory)
         self._registrations.setdefault(key, []).append(registration)
         self._invalidate_fast_creators()
 
@@ -185,6 +217,8 @@ class Container:
                 factory=factory,
                 lifestyle=lifestyle,
             )
+            registration.is_resource = inspect.isasyncgenfunction(factory)
+            registration.is_async = inspect.iscoroutinefunction(factory)
         else:
             if implementation is None:
                 implementation = interface
@@ -841,6 +875,8 @@ class Container:
         factory = registration.factory
         if factory is None:
             raise ValueError("Factory cannot be None for factory registration.")
+        if registration.is_async or registration.is_resource:
+            raise AsyncResolutionRequiredException(factory)
         plan = self._get_factory_plan(registration)
         args = [
             self._resolve_dependency_plan(dependency_plan, scope, factory)  # type: ignore[arg-type]
@@ -848,14 +884,231 @@ class Container:
         ]
         return factory(*args)
 
+    # ------------------------------------------------------------------ async
+
+    def ascope(self) -> AsyncScope:
+        """Open an async resolution scope. Use as ``async with``; async resources
+        resolved inside are finalized when the block exits."""
+        return AsyncScope(self)
+
+    async def aresolve(
+        self, interface: Union[Type, str], name: Optional[str] = None
+    ) -> Any:
+        """Resolve a service through the async path (awaits async factories).
+
+        Convenience wrapper that opens a short-lived scope. Any scoped/transient
+        async *resource* opened here is finalized on return, so for resources you
+        want to keep open, resolve inside ``async with container.ascope()``.
+        Singleton resources live until ``await container.aclose()``.
+        """
+        async with self.ascope() as scope:
+            return await scope.aresolve(interface, name)
+
+    async def aclose(self) -> None:
+        """Finalize singleton async resources. Call once at application shutdown."""
+        if self._async_stack is not None:
+            stack, self._async_stack = self._async_stack, None
+            await stack.aclose()
+
+    def _get_async_stack(self) -> AsyncExitStack:
+        if self._async_stack is None:
+            self._async_stack = AsyncExitStack()
+        return self._async_stack
+
+    async def _aresolve_one(
+        self,
+        interface: Union[Type, str],
+        scope: AsyncScope,
+        name: Optional[str],
+        resolving: Set[Any],
+    ) -> Any:
+        key = (interface, name)
+        registrations = self._registrations.get(key)
+        if not registrations:
+            interface_name = f"{interface}"
+            if name is not None:
+                interface_name += f" with name '{name}'"
+            raise ServiceNotRegisteredException(interface_name)
+        return await self._aget_instance_from_registration(
+            registrations[0], scope, key, resolving
+        )
+
+    async def _aget_instance_from_registration(
+        self,
+        registration: Registration,
+        scope: AsyncScope,
+        key: Tuple[Union[Type, str], Optional[str]],
+        resolving: Set[Any],
+    ) -> Any:
+        if registration.kind == RegistrationType.INSTANCE:
+            return registration.instance
+
+        instance_key = (key, registration)
+        lifestyle = registration.lifestyle
+        if lifestyle == LifeStyle.SINGLETON:
+            if instance_key in self._singletons:
+                return self._singletons[instance_key]
+            instance = await self._acreate_instance_from_registration(
+                registration, scope, resolving, singleton=True
+            )
+            self._singletons[instance_key] = instance
+            return instance
+        if lifestyle == LifeStyle.SCOPED:
+            if instance_key in scope._scoped_instances:
+                return scope._scoped_instances[instance_key]
+            instance = await self._acreate_instance_from_registration(
+                registration, scope, resolving, singleton=False
+            )
+            scope._scoped_instances[instance_key] = instance
+            return instance
+        return await self._acreate_instance_from_registration(
+            registration, scope, resolving, singleton=False
+        )
+
+    async def _acreate_instance_from_registration(
+        self,
+        registration: Registration,
+        scope: AsyncScope,
+        resolving: Set[Any],
+        singleton: bool,
+    ) -> Any:
+        if registration.kind == RegistrationType.SERVICE:
+            if registration.implementation is None:
+                raise ValueError(
+                    "Implementation cannot be None for service registration."
+                )
+            return await self._acreate_service_from_registration(
+                registration, scope, resolving
+            )
+        if registration.kind == RegistrationType.FACTORY:
+            if registration.factory is None:
+                raise ValueError("Factory cannot be None for factory registration.")
+            return await self._ainvoke_factory_registration(
+                registration, scope, resolving, singleton
+            )
+        raise ValueError(f"Invalid registration kind: {registration.kind}")
+
+    async def _acreate_service_from_registration(
+        self, registration: Registration, scope: AsyncScope, resolving: Set[Any]
+    ) -> Any:
+        cls = registration.implementation
+        if cls is None:
+            raise ValueError("Implementation cannot be None for service registration.")
+        if cls in resolving:
+            raise CyclicDependencyException(cls)
+
+        plan = self._get_service_plan(registration)
+        resolving.add(cls)
+        try:
+            if plan.dependencies:
+                args = [
+                    await self._aresolve_dependency_plan(
+                        dependency_plan, scope, cls, resolving
+                    )
+                    for dependency_plan in plan.dependencies
+                ]
+                instance = cls(*args)
+            else:
+                instance = cls()
+            if plan.property_dependencies:
+                await self._ainject_property_dependencies(
+                    instance, scope, plan.property_dependencies, resolving
+                )
+            return instance
+        finally:
+            resolving.discard(cls)
+
+    async def _ainvoke_factory_registration(
+        self,
+        registration: Registration,
+        scope: AsyncScope,
+        resolving: Set[Any],
+        singleton: bool,
+    ) -> Any:
+        factory = registration.factory
+        if factory is None:
+            raise ValueError("Factory cannot be None for factory registration.")
+        plan = self._get_factory_plan(registration)
+        args = [
+            await self._aresolve_dependency_plan(
+                dependency_plan, scope, factory, resolving
+            )  # type: ignore[arg-type]
+            for dependency_plan in plan.dependencies
+        ]
+        if registration.is_resource:
+            stack = self._get_async_stack() if singleton else scope._stack
+            cm = asynccontextmanager(factory)(*args)
+            return await stack.enter_async_context(cm)
+        if registration.is_async:
+            return await factory(*args)
+        return factory(*args)
+
+    async def _aresolve_dependency_plan(
+        self,
+        dependency_plan: _DependencyPlan,
+        scope: AsyncScope,
+        owner: Any,
+        resolving: Set[Any],
+    ) -> Any:
+        if dependency_plan.inject_container:
+            return self
+
+        dependency_type = dependency_plan.dependency_type
+        if dependency_type == inspect.Parameter.empty:
+            raise MissingTypeAnnotationException(dependency_plan.name, owner)
+        if dependency_type in resolving:
+            raise CyclicDependencyException(dependency_type)
+
+        dependency_key = dependency_plan.dependency_key
+        registrations = None
+        if dependency_key is not None:
+            registrations = self._registrations.get(dependency_key)
+        if registrations and dependency_key is not None:
+            return await self._aget_instance_from_registration(
+                registrations[0], scope, dependency_key, resolving
+            )
+
+        if dependency_plan.has_default:
+            return dependency_plan.default
+        if dependency_plan.is_optional:
+            return None
+        raise ServiceNotRegisteredException(f"{dependency_type}")
+
+    async def _ainject_property_dependencies(
+        self,
+        instance: object,
+        scope: AsyncScope,
+        property_dependencies: Tuple[_DependencyPlan, ...],
+        resolving: Set[Any],
+    ) -> None:
+        existing = getattr(instance, "__dict__", None)
+        for dependency_plan in property_dependencies:
+            if existing is not None and dependency_plan.name in existing:
+                continue
+            dependency_type = dependency_plan.dependency_type
+            if dependency_type in resolving:
+                raise CyclicDependencyException(dependency_type)
+            dependency = await self._aresolve_dependency_plan(
+                dependency_plan, scope, type(instance), resolving
+            )
+            try:
+                setattr(instance, dependency_plan.name, dependency)
+            except AttributeError as exc:
+                raise PropertyInjectionException(
+                    type(instance), dependency_plan.name
+                ) from exc
+
     def _inject_property_dependencies(
         self,
         instance: object,
         scope: Scope,
         property_dependencies: Tuple[_DependencyPlan, ...],
     ) -> None:
+        # `__dict__` is absent on __slots__ types; getattr keeps the
+        # "already set?" check working without raising on those.
+        existing = getattr(instance, "__dict__", None)
         for dependency_plan in property_dependencies:
-            if dependency_plan.name in instance.__dict__:
+            if existing is not None and dependency_plan.name in existing:
                 continue
             dependency_type = dependency_plan.dependency_type
             if dependency_type in self._resolving:
@@ -865,7 +1118,14 @@ class Container:
                 dependency_plan, scope, type(instance)
             )
 
-            setattr(instance, dependency_plan.name, dependency)
+            try:
+                setattr(instance, dependency_plan.name, dependency)
+            except AttributeError as exc:
+                # __slots__ without the slot, or a frozen dataclass
+                # (FrozenInstanceError subclasses AttributeError).
+                raise PropertyInjectionException(
+                    type(instance), dependency_plan.name
+                ) from exc
 
     def _create_service_from_registration(
         self, registration: Registration, scope: Scope
@@ -904,8 +1164,9 @@ class Container:
         return factory(*args)
 
     def _inject_properties(self, instance: object, scope: Scope) -> None:
+        existing = getattr(instance, "__dict__", None)
         for dependency_plan in _cached_property_dependencies(cast(Any, type(instance))):
-            if dependency_plan.name in instance.__dict__:
+            if existing is not None and dependency_plan.name in existing:
                 continue
             dependency_type = dependency_plan.dependency_type
             if dependency_type in self._resolving:
@@ -915,7 +1176,12 @@ class Container:
                 dependency_plan, scope, type(instance)
             )
 
-            setattr(instance, dependency_plan.name, dependency)
+            try:
+                setattr(instance, dependency_plan.name, dependency)
+            except AttributeError as exc:
+                raise PropertyInjectionException(
+                    type(instance), dependency_plan.name
+                ) from exc
 
     def _create_instance(self, cls: Type, scope: Scope) -> Any:
         if cls in self._resolving:

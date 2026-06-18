@@ -28,6 +28,8 @@ class Registration:
         "fast_creator",
         "fast_creator_version",
         "fast_creator_needs_scope",
+        "is_async",
+        "is_resource",
     )
 
     def __init__(
@@ -47,6 +49,11 @@ class Registration:
         self.fast_creator: Optional[Callable[[Any], Any]] = None
         self.fast_creator_version = -1
         self.fast_creator_needs_scope = False
+        # Async support: a coroutine-function factory (is_async) or an
+        # async-generator factory used as a resource with teardown (is_resource).
+        # Both are resolved only through the async path; sync resolve rejects them.
+        self.is_async = False
+        self.is_resource = False
 
 
 class OverrideContext:
