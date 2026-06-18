@@ -121,9 +121,11 @@ A full runnable example is in
 
 ## Notes
 
-- The async path is interpreted (no compiled flat creator yet). Async resolution
-  is dominated by `await` anyway, and keeping it separate means the synchronous
-  fast path is completely unaffected.
+- `aresolve()` compiles a flat `async` creator that inlines the synchronous parts
+  of the graph and awaits only genuinely async nodes; a graph with no async
+  factories reuses the synchronous compiled creator outright. Graphs it can't
+  flatten fall back to an interpreted async walk. The synchronous fast path is
+  unaffected either way.
 - Cycle detection on the async path uses a per-resolution guard, so concurrent
   resolves on one container cannot interfere with each other.
 - A singleton async resource is meant to live until `aclose()`. In tests, run the

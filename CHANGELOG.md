@@ -11,13 +11,18 @@ and this project uses semantic versioning.
 
 ### Changed
 
-- Faster `aresolve()` for graphs with no async factories: it now reuses the
-  compiled synchronous creator instead of walking the graph with a coroutine per
-  node. On the project benchmark this drops a fully-synchronous `aresolve()` from
-  `~5.1 µs/op` to `~0.41 µs/op` — on par with sync `resolve()`. This is the common
-  FastAPI shape (awaiting `aresolve()` on plain classes). Graphs that actually
-  contain `async def` factories or async resources still take the async path and
-  are unchanged.
+- Compiled async resolution. `aresolve()` now compiles a flat `async` creator
+  that inlines the synchronous parts of a graph and awaits only the genuinely
+  async nodes, instead of walking the graph with a coroutine per node:
+  - a graph with no async factories reuses the synchronous compiled creator and
+    drops from `~5.1 µs/op` to `~0.44 µs/op` (on par with sync `resolve()`) — the
+    common FastAPI shape of awaiting `aresolve()` on plain classes;
+  - a graph with an `async def` factory drops from `~3.0 µs/op` to `~1.2 µs/op`
+    on the project benchmark.
+
+  See `benchmarks/resolve_async.py` for a reproducible cross-library comparison.
+  Async resources keep their LIFO finalization semantics; graphs that can't be
+  flattened fall back to the previous interpreted async walk.
 
 ### Added
 
