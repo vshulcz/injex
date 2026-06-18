@@ -34,6 +34,7 @@ Important pages:
 - API reference: https://vshulcz.github.io/injex/docs/api.html
 - Comparison guide: https://vshulcz.github.io/injex/docs/comparison.html
 - FastAPI Depends boundary: https://vshulcz.github.io/injex/docs/fastapi-depends.html
+- Async resolution (async factories, async resources, async scopes): https://vshulcz.github.io/injex/docs/async.html
 - Larger DI frameworks: https://vshulcz.github.io/injex/docs/di-frameworks.html
 - Recipes: https://vshulcz.github.io/injex/docs/recipes.html
 - Migrating from a factories module: https://vshulcz.github.io/injex/docs/migrating-from-factories.html

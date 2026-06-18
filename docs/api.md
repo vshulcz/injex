@@ -50,6 +50,21 @@ restores the original registration when the context exits.
 
 Use a scope for request, message, job, or command lifetimes.
 
+## Async
+
+Async factories (`async def`) and async-generator resources are registered with
+the same `add_*_factory` methods and resolved through the async API.
+
+- `await container.aresolve(interface, name=None)` resolves one service, awaiting
+  any async factory in the graph.
+- `async with container.ascope() as scope:` opens an `AsyncScope`. Scoped and
+  transient async resources resolved via `await scope.aresolve(...)` are finalized
+  (LIFO) when the block exits.
+- `await container.aclose()` finalizes singleton async resources at shutdown.
+
+The synchronous `resolve()` raises `AsyncResolutionRequiredException` if the graph
+needs async work. See [async resolution](./async.md) for the full guide.
+
 ## Exceptions
 
 - `ServiceNotRegisteredException`
@@ -57,5 +72,7 @@ Use a scope for request, message, job, or command lifetimes.
 - `MissingTypeAnnotationException`
 - `InvalidLifestyleException`
 - `ContainerValidationException`
+- `AsyncResolutionRequiredException`
+- `PropertyInjectionException`
 
 All exception classes inherit from `DIException`.
