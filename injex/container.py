@@ -108,6 +108,16 @@ class AsyncScope:
         self, interface: Union[Type, str], name: Optional[str] = None
     ) -> Any:
         """Resolve one service from this async scope (awaits async factories)."""
+        if name is None:
+            # A compiled noscope creator only exists for a graph with no
+            # factories at all (see _build_fast_creator), so it can contain no
+            # async work — resolve it directly and skip the coroutine walk.
+            container = self.container
+            creator = container._noscope_creators.get(interface, _MISSING)
+            if creator is _MISSING:
+                creator = container._prime_noscope_creator(interface)
+            if creator is not None:
+                return creator(None)  # type: ignore[operator]
         return await self.container._aresolve_one(interface, self, name, set())
 
 
@@ -966,6 +976,15 @@ class Container:
         be resolved inside ``async with container.ascope()`` instead, since the
         short-lived scope here would finalize them before you could use them.
         """
+        if name is None:
+            # Fully-sync graph (no factories anywhere): reuse the compiled sync
+            # creator and skip allocating an async scope + coroutine walk. This
+            # is the common FastAPI case — await aresolve() on plain classes.
+            creator = self._noscope_creators.get(interface, _MISSING)
+            if creator is _MISSING:
+                creator = self._prime_noscope_creator(interface)
+            if creator is not None:
+                return creator(None)  # type: ignore[operator]
         registrations = self._registrations.get((interface, name))
         if registrations:
             registration = registrations[0]
