@@ -151,7 +151,10 @@ async def get_service(scope: AsyncScope = Depends(request_scope)) -> RegisterUse
 
         <h2>Notes</h2>
         <ul>
-          <li>The async path is interpreted (no compiled flat creator yet); the sync fast path is unaffected.</li>
+          <li><code>aresolve()</code> compiles a flat <code>async</code> creator that inlines the
+            synchronous parts of the graph and awaits only genuinely async nodes (a graph with no
+            async factories reuses the synchronous compiled creator); unflattenable graphs fall back
+            to an interpreted async walk. The sync fast path is unaffected.</li>
           <li>Cycle detection on the async path uses a per-resolution guard, so concurrent resolves don't interfere.</li>
           <li>
             A singleton async resource lives until <code>aclose()</code>. In tests, run the resolve

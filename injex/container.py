@@ -108,17 +108,20 @@ class AsyncScope:
         self, interface: Union[Type, str], name: Optional[str] = None
     ) -> Any:
         """Resolve one service from this async scope (awaits async factories)."""
+        container = self.container
         if name is None:
             # A compiled noscope creator only exists for a graph with no
             # factories at all (see _build_fast_creator), so it can contain no
             # async work — resolve it directly and skip the coroutine walk.
-            container = self.container
             creator = container._noscope_creators.get(interface, _MISSING)
             if creator is _MISSING:
                 creator = container._prime_noscope_creator(interface)
             if creator is not None:
                 return creator(None)  # type: ignore[operator]
-        return await self.container._aresolve_one(interface, self, name, set())
+        acreator = container._get_async_creator((interface, name))
+        if acreator is not None:
+            return await acreator[0](self)
+        return await container._aresolve_one(interface, self, name, set())
 
 
 class Container:
@@ -130,6 +133,7 @@ class Container:
         "_async_stack",
         "_resolving_local",
         "_async_resource_keys",
+        "_async_creators",
     )
 
     def __init__(self):
@@ -154,6 +158,15 @@ class Container:
         # registration attribute reads. Value is None when the interface is not
         # eligible for the no-scope fast path. Cleared on every invalidation.
         self._noscope_creators: Dict[Any, Optional[Callable[[Any], Any]]] = {}
+        # Compiled async creators per (interface, name): an `async def` that
+        # inlines the synchronous parts of the graph and awaits only genuine
+        # async nodes, plus a flag for whether it needs an async scope.
+        # Value is None when the graph can't be flattened (falls back to the
+        # interpreted async walk). Cleared on every invalidation.
+        self._async_creators: Dict[
+            Tuple[Union[Type, str], Optional[str]],
+            Optional[Tuple[Callable[[Any], Any], bool]],
+        ] = {}
 
     @property
     def _resolving(self) -> Set[Any]:
@@ -166,6 +179,7 @@ class Container:
     def _invalidate_fast_creators(self) -> None:
         self._version += 1
         self._noscope_creators.clear()
+        self._async_creators.clear()
 
     def register(
         self,
@@ -713,6 +727,150 @@ class Container:
         exec("\n".join(source_lines), namespace, local)  # noqa: S102
         return local["_flat"], needs_scope[0]
 
+    def _get_async_creator(
+        self, key: Tuple[Union[Type, str], Optional[str]]
+    ) -> Optional[Tuple[Callable[[Any], Any], bool]]:
+        cached = self._async_creators.get(key, _MISSING)
+        if cached is not _MISSING:
+            return cached  # type: ignore[return-value]
+        registrations = self._registrations.get(key)
+        result: Optional[Tuple[Callable[[Any], Any], bool]] = None
+        if registrations:
+            result = self._build_async_flat_creator(registrations[0], key)
+        self._async_creators[key] = result
+        return result
+
+    def _build_async_flat_creator(
+        self,
+        registration: Registration,
+        key: Tuple[Union[Type, str], Optional[str]],
+    ) -> Optional[Tuple[Callable[[Any], Any], bool]]:
+        """Compile an ``async def`` creator that inlines the synchronous parts of
+        the graph and awaits only genuine async nodes.
+
+        Synchronous subgraphs reuse the compiled sync fast creator (no coroutine
+        per node); async factories and async resources are delegated to the
+        interpreted async path through a bound getter and awaited once. Returns
+        ``None`` for any shape it cannot flatten (cycles touching inlined nodes,
+        property injection on an inlined transient, container injection), so the
+        caller falls back to the fully interpreted async walk. As in the sync
+        builder, no user names or values are interpolated into generated source.
+        """
+        namespace: Dict[str, Any] = {}
+        prelude: List[str] = []
+        shared: Dict[Any, str] = {}
+        counter = [0]
+        needs_scope = [False]
+
+        def bind(obj: Any, prefix: str) -> str:
+            counter[0] += 1
+            sym = f"{prefix}{counter[0]}"
+            namespace[sym] = obj
+            return sym
+
+        def delegate(
+            reg: Registration, node_key: Tuple[Union[Type, str], Optional[str]]
+        ) -> str:
+            lifestyle = reg.lifestyle
+            if lifestyle == LifeStyle.SCOPED or (
+                reg.is_resource and lifestyle == LifeStyle.TRANSIENT
+            ):
+                needs_scope[0] = True
+
+            def getter(
+                scope: Any, _reg: Registration = reg, _key: Any = node_key
+            ) -> Any:
+                return self._aget_instance_from_registration(_reg, scope, _key, set())
+
+            sym = bind(getter, "ag")
+            if lifestyle == LifeStyle.TRANSIENT:
+                return f"(await {sym}(scope))"
+            if node_key in shared:
+                return shared[node_key]
+            counter[0] += 1
+            var = f"v{counter[0]}"
+            prelude.append(f"{var} = await {sym}(scope)")
+            shared[node_key] = var
+            return var
+
+        def emit(
+            reg: Registration,
+            node_key: Tuple[Union[Type, str], Optional[str]],
+            path: frozenset,
+        ) -> str:
+            if reg.kind == RegistrationType.INSTANCE:
+                if node_key in shared:
+                    return shared[node_key]
+                sym = bind(reg.instance, "c")
+                shared[node_key] = sym
+                return sym
+
+            built = self._build_fast_creator(reg, node_key, set())
+            if built is not None:
+                creator, leaf_needs_scope = built
+                if leaf_needs_scope:
+                    needs_scope[0] = True
+                gsym = bind(creator, "g")
+                if reg.lifestyle == LifeStyle.TRANSIENT:
+                    return f"{gsym}(scope)"
+                if node_key in shared:
+                    return shared[node_key]
+                counter[0] += 1
+                var = f"v{counter[0]}"
+                prelude.append(f"{var} = {gsym}(scope)")
+                shared[node_key] = var
+                return var
+
+            # Async node. Inline a plain transient constructor; delegate factories,
+            # async resources, and cached (singleton/scoped) async services.
+            if reg.kind == RegistrationType.SERVICE and (
+                reg.lifestyle == LifeStyle.TRANSIENT
+            ):
+                cls = reg.implementation
+                if cls is None or node_key in path:
+                    raise _NotFlat
+                plan = self._get_service_plan(reg)
+                if plan.property_dependencies:
+                    return delegate(reg, node_key)
+                child_path = path | {node_key}
+                child_exprs: List[str] = []
+                for dependency_plan in plan.dependencies:
+                    if dependency_plan.inject_container:
+                        raise _NotFlat
+                    if dependency_plan.dependency_type == inspect.Parameter.empty:
+                        raise _NotFlat
+                    dependency_key = dependency_plan.dependency_key
+                    if dependency_key is None:
+                        raise _NotFlat
+                    dependency_regs = self._registrations.get(dependency_key)
+                    if not dependency_regs:
+                        if dependency_plan.has_default:
+                            child_exprs.append(bind(dependency_plan.default, "d"))
+                            continue
+                        if dependency_plan.is_optional:
+                            child_exprs.append("None")
+                            continue
+                        raise _NotFlat
+                    child_exprs.append(
+                        emit(dependency_regs[0], dependency_key, child_path)
+                    )
+                cls_sym = bind(cls, "t")
+                return f"{cls_sym}({', '.join(child_exprs)})"
+
+            return delegate(reg, node_key)
+
+        try:
+            root_expr = emit(registration, key, frozenset())
+        except _NotFlat:
+            return None
+
+        source_lines = ["async def _aflat(scope):"]
+        source_lines.extend(f"    {line}" for line in prelude)
+        source_lines.append(f"    return {root_expr}")
+        local: Dict[str, Any] = {}
+        exec("\n".join(source_lines), namespace, local)  # noqa: S102
+        return local["_aflat"], needs_scope[0]
+
     def _build_fast_creator(
         self,
         registration: Registration,
@@ -997,6 +1155,14 @@ class Container:
                     "aresolve() would finalize it immediately. Resolve it inside "
                     "'async with container.ascope() as scope: await scope.aresolve(...)'."
                 )
+        acreator = self._get_async_creator((interface, name))
+        if acreator is not None:
+            creator_fn, creator_needs_scope = acreator
+            if not creator_needs_scope:
+                # Singletons only: no scope to allocate or finalize.
+                return await creator_fn(None)
+            async with self.ascope() as scope:
+                return await creator_fn(scope)
         async with self.ascope() as scope:
             return await scope.aresolve(interface, name)
 
