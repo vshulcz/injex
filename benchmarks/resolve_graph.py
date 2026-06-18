@@ -19,6 +19,7 @@ from injex import Container as InjexContainer
 import punq
 import wireup
 from dependency_injector import containers, providers
+from dishka import Provider, Scope, from_context, make_container, provide
 from lagom import Container as LagomContainer
 from wireup import injectable
 
@@ -108,6 +109,23 @@ def setup_lagom() -> Callable[[], RegisterUser]:
     container[RegisterUser] = RegisterUser
     container[RegisterUser]
     return lambda: container[RegisterUser]
+
+
+class DishkaProvider(Provider):
+    # Same graph: Settings is a provided instance, ApiClient a singleton
+    # (cache=True), the rest transient (cache=False) so each get() builds anew.
+    settings = from_context(provides=Settings, scope=Scope.APP)
+    api_client = provide(ApiClient, scope=Scope.APP)
+    repo = provide(UserRepository, scope=Scope.APP, cache=False)
+    email = provide(EmailSender, scope=Scope.APP, cache=False)
+    audit = provide(AuditLog, scope=Scope.APP, cache=False)
+    register_user = provide(RegisterUser, scope=Scope.APP, cache=False)
+
+
+def setup_dishka() -> Callable[[], RegisterUser]:
+    container = make_container(DishkaProvider(), context={Settings: settings})
+    container.get(RegisterUser)
+    return lambda: container.get(RegisterUser)
 
 
 class DIContainer(containers.DeclarativeContainer):
@@ -250,7 +268,14 @@ def package_version(name: str) -> str:
 
 def main() -> None:
     print(f"Python: {platform.python_version()} ({platform.machine()})")
-    for package in ["injex", "wireup", "dependency-injector", "lagom", "punq"]:
+    for package in [
+        "injex",
+        "wireup",
+        "dishka",
+        "dependency-injector",
+        "lagom",
+        "punq",
+    ]:
         print(f"{package}: {package_version(package)}")
 
     cases = [
@@ -258,6 +283,7 @@ def main() -> None:
         ("injex", setup_injex()),
         ("wireup same scope", setup_wireup_same_scope()),
         ("wireup scope/op", setup_wireup_scope_per_op()),
+        ("dishka", setup_dishka()),
         ("dependency-injector", setup_dependency_injector()),
         ("lagom", setup_lagom()),
         ("punq", setup_punq()),
