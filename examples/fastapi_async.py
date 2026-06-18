@@ -119,7 +119,5 @@ async def get_user_service(
 
 
 @app.get("/users/{uid}")
-async def read_user(
-    uid: int, service: UserService = Depends(get_user_service)
-) -> dict:
+async def read_user(uid: int, service: UserService = Depends(get_user_service)) -> dict:
     return await service.get(uid)
