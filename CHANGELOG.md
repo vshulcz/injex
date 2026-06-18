@@ -9,6 +9,16 @@ and this project uses semantic versioning.
 
 ## [1.5.0] - 2026-06-19
 
+### Changed
+
+- Faster `aresolve()` for graphs with no async factories: it now reuses the
+  compiled synchronous creator instead of walking the graph with a coroutine per
+  node. On the project benchmark this drops a fully-synchronous `aresolve()` from
+  `~5.1 µs/op` to `~0.41 µs/op` — on par with sync `resolve()`. This is the common
+  FastAPI shape (awaiting `aresolve()` on plain classes). Graphs that actually
+  contain `async def` factories or async resources still take the async path and
+  are unchanged.
+
 ### Added
 
 - Typed `resolve()` / `resolve_all()` / `aresolve()` via `@overload`: passing a
