@@ -21,7 +21,6 @@ from .planning import (
     _get_callable_plan as _get_callable_plan,
     _get_type_hints as _get_type_hints,
     _make_fast_raw_creator as _make_fast_raw_creator,
-    _make_guarded_fast_creator as _make_guarded_fast_creator,
     inject,
     is_injectable as is_injectable,
 )

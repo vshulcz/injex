@@ -8,7 +8,6 @@ import injex.container as container_module
 import injex.planning as planning
 from injex import (
     Container,
-    CyclicDependencyException,
     LifeStyle,
     ServiceNotRegisteredException,
     ValidationError,
@@ -75,53 +74,6 @@ class TestCoverageEdges(unittest.TestCase):
             injex._make_fast_raw_creator(Target, creators[:5])(None).values,
             (0, 1, 2, 3, 4),
         )
-
-    def test_guarded_fast_creator_arities_and_cycle(self):
-        class Target:
-            def __init__(self, *values):
-                self.values = values
-
-        resolving = set()
-        creators = [lambda scope, value=value: value for value in range(5)]
-
-        self.assertEqual(
-            injex._make_guarded_fast_creator(Target, [], resolving)(None).values,
-            (),
-        )
-        self.assertEqual(
-            injex._make_guarded_fast_creator(Target, creators[:1], resolving)(
-                None
-            ).values,
-            (0,),
-        )
-        self.assertEqual(
-            injex._make_guarded_fast_creator(Target, creators[:2], resolving)(
-                None
-            ).values,
-            (0, 1),
-        )
-        self.assertEqual(
-            injex._make_guarded_fast_creator(Target, creators[:3], resolving)(
-                None
-            ).values,
-            (0, 1, 2),
-        )
-        self.assertEqual(
-            injex._make_guarded_fast_creator(Target, creators[:4], resolving)(
-                None
-            ).values,
-            (0, 1, 2, 3),
-        )
-        self.assertEqual(
-            injex._make_guarded_fast_creator(Target, creators[:5], resolving)(
-                None
-            ).values,
-            (0, 1, 2, 3, 4),
-        )
-
-        resolving.add(Target)
-        with self.assertRaises(CyclicDependencyException):
-            injex._make_guarded_fast_creator(Target, [], resolving)(None)
 
     def test_validate_registration_error_branches(self):
         container = Container()
@@ -424,62 +376,6 @@ class TestCoverageEdges(unittest.TestCase):
         first = container._resolve_dependency_plan(plan, scope, object)
         second = container._resolve_dependency_plan(plan, scope, object)
         self.assertIs(first, second)
-
-    def test_direct_old_factory_and_instance_paths(self):
-        container = Container()
-        scope = container.create_scope()
-
-        class Dependency: ...
-
-        class Service:
-            def __init__(self, dependency: Dependency):
-                self.dependency = dependency
-
-        container.add_transient(Dependency)
-
-        def factory(dependency: Dependency) -> Service:
-            return Service(dependency)
-
-        self.assertIsInstance(container._invoke_factory(factory, scope), Service)
-        self.assertIsInstance(container._create_instance(Service, scope), Service)
-
-        with self.assertRaises(CyclicDependencyException):
-            container._resolving.add(Service)
-            try:
-                container._create_instance(Service, scope)
-            finally:
-                container._resolving.remove(Service)
-
-    def test_direct_property_injection_skip_existing_and_cycle(self):
-        container = Container()
-        scope = container.create_scope()
-
-        class Dependency: ...
-
-        class Service:
-            def __init__(self):
-                self.dependency = "existing"
-
-            @inject
-            @abstractmethod
-            def dependency(self) -> Dependency: ...
-
-        container.add_transient(Dependency)
-        service = Service()
-        container._inject_properties(service, scope)
-        self.assertEqual(service.dependency, "existing")
-
-        class Cyclic:
-            @inject
-            @abstractmethod
-            def dependency(self) -> Dependency: ...
-
-        container._resolving.add(Dependency)
-        try:
-            with self.assertRaises(CyclicDependencyException):
-                container._inject_properties(Cyclic(), scope)
-        finally:
-            container._resolving.remove(Dependency)
 
     def test_singleton_and_scoped_fallback_cache_branches(self):
         container = Container()

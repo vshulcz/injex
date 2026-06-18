@@ -8,7 +8,6 @@ from typing import (
     Dict,
     List,
     Optional,
-    Set,
     Tuple,
     Type,
     Union,
@@ -17,8 +16,6 @@ from typing import (
     get_origin,
     get_type_hints,
 )
-
-from .errors import CyclicDependencyException
 
 
 def inject(func: Callable) -> Callable:
@@ -244,96 +241,6 @@ def _make_fast_raw_creator(
         dep0, dep1, dep2, dep3 = dependency_creators
         return lambda scope: cls(dep0(scope), dep1(scope), dep2(scope), dep3(scope))
     return lambda scope: cls(*(creator(scope) for creator in dependency_creators))
-
-
-def _make_guarded_fast_creator(
-    cls: Type,
-    dependency_creators: List[Callable[[Any], Any]],
-    resolving: Set[Type],
-) -> Callable[[Any], Any]:
-    dependency_count = len(dependency_creators)
-
-    if dependency_count == 0:
-
-        def create0(scope: Any) -> Any:
-            if cls in resolving:
-                raise CyclicDependencyException(cls)
-            resolving.add(cls)
-            try:
-                return cls()
-            finally:
-                resolving.remove(cls)
-
-        return create0
-
-    if dependency_count == 1:
-        dep0 = dependency_creators[0]
-
-        def create1(scope: Any) -> Any:
-            if cls in resolving:
-                raise CyclicDependencyException(cls)
-            resolving.add(cls)
-            try:
-                return cls(dep0(scope))
-            finally:
-                resolving.remove(cls)
-
-        return create1
-
-    if dependency_count == 2:
-        dep0, dep1 = dependency_creators
-
-        def create2(scope: Any) -> Any:
-            if cls in resolving:
-                raise CyclicDependencyException(cls)
-            resolving.add(cls)
-            try:
-                return cls(dep0(scope), dep1(scope))
-            finally:
-                resolving.remove(cls)
-
-        return create2
-
-    if dependency_count == 3:
-        dep0, dep1, dep2 = dependency_creators
-
-        def create3(scope: Any) -> Any:
-            if cls in resolving:
-                raise CyclicDependencyException(cls)
-            resolving.add(cls)
-            try:
-                return cls(dep0(scope), dep1(scope), dep2(scope))
-            finally:
-                resolving.remove(cls)
-
-        return create3
-
-    if dependency_count == 4:
-        dep0, dep1, dep2, dep3 = dependency_creators
-
-        def create4(scope: Any) -> Any:
-            if cls in resolving:
-                raise CyclicDependencyException(cls)
-            resolving.add(cls)
-            try:
-                return cls(dep0(scope), dep1(scope), dep2(scope), dep3(scope))
-            finally:
-                resolving.remove(cls)
-
-        return create4
-
-    create_raw = _make_fast_raw_creator(cls, dependency_creators)
-
-    def create_many(scope: Any) -> Any:
-        if cls in resolving:
-            raise CyclicDependencyException(cls)
-        resolving.add(cls)
-        try:
-            return create_raw(scope)
-        finally:
-            resolving.remove(cls)
-
-    return create_many
 
 
 def _none_creator(scope: Any) -> Any:
