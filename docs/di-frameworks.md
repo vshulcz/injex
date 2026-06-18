@@ -1,25 +1,23 @@
 # Compared to larger DI frameworks
 
-Injex is intentionally small. It is not trying to replace every Python DI
-framework.
+Injex is intentionally small. This page is about the named alternatives and where
+Injex genuinely loses to them — for the general manual-vs-framework-vs-Injex
+decision, see the [comparison guide](./comparison.md).
 
-Use Injex when you want:
+## Where Injex loses
 
-- explicit registrations;
-- constructor injection from type hints;
-- singleton, transient, and scoped lifetimes;
-- temporary test overrides;
-- startup graph validation;
-- zero runtime dependencies;
-- low overhead for repeated resolves in small service graphs.
+Pick a larger framework when you need any of these — Injex deliberately doesn't do
+them:
 
-Use a larger DI framework when you want:
-
-- a provider DSL as a first-class architecture tool;
-- advanced configuration injection;
-- framework integrations that own handler/task wiring;
-- async resource orchestration built into the container;
-- a broad ecosystem of container-specific features.
+- **Async resource lifecycle.** Containers like `dependency-injector` and Dishka can
+  open and close async resources (connection pools, `async with`) as part of
+  resolution. Injex resolves objects; you manage async resource lifetimes yourself
+  or via your framework's lifespan.
+- **A configuration/provider DSL.** If wiring config values through provider objects
+  is part of your architecture, `dependency-injector` is purpose-built for it.
+- **Deep framework auto-wiring.** Dishka/Wireup can plug directly into FastAPI or
+  task-framework scopes and inject into handler signatures. Injex stays at the
+  composition root and lets the framework adapt the graph at its edge.
 
 ## Dependency Injector
 
@@ -38,14 +36,6 @@ task framework scopes.
 
 Injex keeps the boundary more conservative: build the app graph at the
 composition root, then let FastAPI/Typer/workers adapt that graph at their edge.
-
-## Manual wiring
-
-Manual wiring remains the best default for small apps. A few direct constructor
-calls are clearer than any container.
-
-Move to Injex when the same graph starts repeating across API startup, CLI
-commands, workers, and tests.
 
 ## Benchmark context
 

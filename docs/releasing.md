@@ -24,8 +24,8 @@ This checklist keeps releases small, repeatable, and easy to audit.
 Use annotated version tags:
 
 ```bash
-git tag -a v1.2.0 -m "Release v1.2.0"
-git push origin v1.2.0
+git tag -a vX.Y.Z -m "Release vX.Y.Z"
+git push origin vX.Y.Z
 ```
 
 The release workflow builds source and wheel distributions, smoke-tests the

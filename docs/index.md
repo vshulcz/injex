@@ -21,6 +21,8 @@ framework-sized dependency injection container.
   command wiring, and test override boundaries.
 - [Migrating from a factories module](./migrating-from-factories.md): move a
   hand-written `factories.py` to Injex without changing application classes.
+- [Async resolution](./async.md): async factories, async resources with
+  scope/lifecycle finalization, and the FastAPI per-request pattern.
 - [Usage scenarios](./usage-scenarios.md): where Injex fits in services, CLIs,
   workers, and tests.
 - [Container validation](./validation.md): check wiring before startup without
