@@ -1,4 +1,5 @@
 import inspect
+import threading
 import types
 from contextlib import AsyncExitStack, asynccontextmanager
 from typing import (
@@ -93,10 +94,11 @@ class Container:
     __slots__ = (
         "_registrations",
         "_singletons",
-        "_resolving",
         "_version",
         "_noscope_creators",
         "_async_stack",
+        "_resolving_local",
+        "_async_resource_keys",
     )
 
     def __init__(self):
@@ -104,16 +106,31 @@ class Container:
             Tuple[Union[Type, str], Optional[str]], List[Registration]
         ] = {}
         self._singletons: Dict[Any, Any] = {}
-        self._resolving: Set[Type] = set()
+        # Per-thread in-progress set for cycle detection on the interpreted sync
+        # path. Thread-local so concurrent resolves (e.g. a threaded web server)
+        # never see each other's in-progress types. The async path uses its own
+        # per-call set; the compiled fast path needs no guard at all.
+        self._resolving_local = threading.local()
         self._version = 0
         # Lazily created AsyncExitStack holding singleton async resources;
         # finalized by `await container.aclose()` at shutdown.
         self._async_stack: Optional[AsyncExitStack] = None
+        # instance_keys of singleton async resources entered on _async_stack, so
+        # aclose() can evict them and avoid handing back a finalized object.
+        self._async_resource_keys: Set[Any] = set()
         # Direct interface -> creator dispatch for the common name=None,
         # no-scope-needed case. Skips the per-resolve key-tuple allocation and
         # registration attribute reads. Value is None when the interface is not
         # eligible for the no-scope fast path. Cleared on every invalidation.
         self._noscope_creators: Dict[Any, Optional[Callable[[Any], Any]]] = {}
+
+    @property
+    def _resolving(self) -> Set[Any]:
+        s = getattr(self._resolving_local, "value", None)
+        if s is None:
+            s = set()
+            self._resolving_local.value = s
+        return s
 
     def _invalidate_fast_creators(self) -> None:
         self._version += 1
@@ -908,6 +925,11 @@ class Container:
         """Finalize singleton async resources. Call once at application shutdown."""
         if self._async_stack is not None:
             stack, self._async_stack = self._async_stack, None
+            # Evict the finalized singleton resources so a later resolve rebuilds
+            # them instead of handing back a closed object.
+            for instance_key in self._async_resource_keys:
+                self._singletons.pop(instance_key, None)
+            self._async_resource_keys.clear()
             await stack.aclose()
 
     def _get_async_stack(self) -> AsyncExitStack:
@@ -952,6 +974,8 @@ class Container:
                 registration, scope, resolving, singleton=True
             )
             self._singletons[instance_key] = instance
+            if registration.is_resource:
+                self._async_resource_keys.add(instance_key)
             return instance
         if lifestyle == LifeStyle.SCOPED:
             if instance_key in scope._scoped_instances:
@@ -1153,56 +1177,7 @@ class Container:
                 )
             return instance
         finally:
-            self._resolving.remove(cls)
-
-    def _invoke_factory(self, factory: Callable[..., Any], scope: Scope) -> Any:
-        plan = _get_callable_plan(factory)
-        args = [
-            self._resolve_dependency_plan(dependency_plan, scope, factory)  # type: ignore[arg-type]
-            for dependency_plan in plan.dependencies
-        ]
-        return factory(*args)
-
-    def _inject_properties(self, instance: object, scope: Scope) -> None:
-        existing = getattr(instance, "__dict__", None)
-        for dependency_plan in _cached_property_dependencies(cast(Any, type(instance))):
-            if existing is not None and dependency_plan.name in existing:
-                continue
-            dependency_type = dependency_plan.dependency_type
-            if dependency_type in self._resolving:
-                raise CyclicDependencyException(dependency_type)
-
-            dependency = self._resolve_dependency_plan(
-                dependency_plan, scope, type(instance)
-            )
-
-            try:
-                setattr(instance, dependency_plan.name, dependency)
-            except AttributeError as exc:
-                raise PropertyInjectionException(
-                    type(instance), dependency_plan.name
-                ) from exc
-
-    def _create_instance(self, cls: Type, scope: Scope) -> Any:
-        if cls in self._resolving:
-            raise CyclicDependencyException(cls)
-
-        self._resolving.add(cls)
-        try:
-            constructor = cls.__init__
-            if constructor is object.__init__:
-                instance = cls()
-            else:
-                plan = _get_callable_plan(constructor, skip_self=True)
-                args = [
-                    self._resolve_dependency_plan(dependency_plan, scope, cls)
-                    for dependency_plan in plan.dependencies
-                ]
-                instance = cls(*args)
-            self._inject_properties(instance, scope)
-            return instance
-        finally:
-            self._resolving.remove(cls)
+            self._resolving.discard(cls)
 
     def add_singleton(
         self,

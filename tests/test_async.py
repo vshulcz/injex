@@ -177,6 +177,32 @@ def test_async_cycle_is_detected():
     asyncio.run(main())
 
 
+def test_singleton_resource_reopens_after_aclose():
+    events = []
+
+    async def resource():
+        events.append("open")
+        try:
+            yield object()
+        finally:
+            events.append("close")
+
+    async def main():
+        c = Container()
+        c.add_singleton_factory(object, resource)
+        a = await c.aresolve(object)
+        await c.aclose()
+        # aclose evicts the finalized singleton; the next resolve must reopen,
+        # not hand back the closed instance.
+        b = await c.aresolve(object)
+        assert a is not b
+        assert events == ["open", "close", "open"]
+        await c.aclose()
+        assert events == ["open", "close", "open", "close"]
+
+    asyncio.run(main())
+
+
 def test_assert_valid_accepts_async_factories():
     async def make_settings() -> Settings:
         return Settings()
