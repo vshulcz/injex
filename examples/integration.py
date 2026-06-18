@@ -54,12 +54,9 @@ class FileLogger(ILogger):
             f.write(f"{message}\n")
 
 
-def db_connection_factory(container: Container):
-    db_type = "mysql"
-    if db_type == "mysql":
-        return MySQLConnection()
-    else:
-        return PostgreSQLConnection()
+def db_connection_factory() -> IDatabaseConnection:
+    # Choose the implementation from config, env, etc.
+    return MySQLConnection()
 
 
 container = Container()
