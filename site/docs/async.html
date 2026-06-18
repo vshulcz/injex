@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Async resolution in Injex — async factories and resource lifecycle</title>
+    <meta
+      name="description"
+      content="Resolve async dependencies in Injex: async def factories, async-generator resources with LIFO teardown, and per-request async scopes for FastAPI — with zero runtime dependencies."
+    />
+    <link rel="canonical" href="https://vshulcz.github.io/injex/docs/async.html" />
+    <meta name="theme-color" content="#070a11" />
+    <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />
+    <meta property="og:title" content="Async resolution in Injex" />
+    <meta property="og:description" content="Async factories and async-resource lifecycles, with zero runtime dependencies." />
+    <meta property="og:image" content="https://vshulcz.github.io/injex/assets/performance-card.svg" />
+    <link rel="stylesheet" href="../styles.css" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": "Async resolution in Injex",
+        "description": "Resolve async dependencies in Injex: async def factories, async-generator resources with LIFO teardown, and per-request async scopes for FastAPI.",
+        "author": {"@type": "Person", "name": "vshulcz", "url": "https://github.com/vshulcz"},
+        "mainEntityOfPage": "https://vshulcz.github.io/injex/docs/async.html"
+      }
+    </script>
+  </head>
+  <body class="docs-page">
+    <a class="skip-link" href="#content">Skip to content</a>
+    <header class="nav">
+      <a class="brand" href="../">Injex</a>
+      <nav aria-label="Primary navigation">
+        <a href="../">Home</a>
+        <a class="active" href="./">Docs</a>
+        <a href="./comparison.html">Compare</a>
+        <a href="https://github.com/vshulcz/injex">GitHub</a>
+      </nav>
+    </header>
+    <main id="content" class="docs-shell">
+      <aside class="docs-sidebar" aria-label="Documentation navigation">
+        <p class="sidebar-title">Documentation</p>
+        <a href="./">Overview</a>
+        <a href="./getting-started.html">Getting started</a>
+        <a href="./validation.html">Validation</a>
+        <a href="./comparison.html">Comparison</a>
+        <a href="./fastapi-depends.html">FastAPI boundary</a>
+        <a class="active" href="./async.html">Async</a>
+        <a href="./di-frameworks.html">DI frameworks</a>
+        <a href="./performance.html">Performance</a>
+        <a href="./recipes.html">Recipes</a>
+        <a href="./migrating-from-factories.html">Migrating from factories</a>
+        <a href="./why.html">Why Injex</a>
+        <a href="./usage.html">Usage scenarios</a>
+        <a href="./python-dependency-injection.html">Python DI guide</a>
+        <a href="./api.html">API reference</a>
+      </aside>
+      <article class="docs-content">
+        <p class="eyebrow">Async</p>
+        <h1>Async resolution</h1>
+        <p class="lead">
+          The synchronous API stays exactly as it is. Async support is a separate
+          path you opt into when a dependency is genuinely asynchronous — an
+          <code>async def</code> factory, or a resource that must be opened and
+          closed around its lifetime. It uses the standard library's
+          <code>contextlib.AsyncExitStack</code>, so still no runtime dependencies.
+        </p>
+
+        <h2>Async factories</h2>
+        <p>
+          Register a coroutine-function factory and resolve it through the async
+          API. The result is cached per its lifetime just like a sync factory:
+        </p>
+        <pre><code>async def load_settings() -> Settings:
+    return await read_config()
+
+container.add_singleton_factory(Settings, load_settings)
+
+async def main() -> None:
+    settings = await container.aresolve(Settings)</code></pre>
+        <p>
+          The sync <code>resolve()</code> raises
+          <code>AsyncResolutionRequiredException</code> if the graph needs async
+          work, so you never silently get back an un-awaited coroutine:
+        </p>
+        <pre><code>container.resolve(Settings)  # AsyncResolutionRequiredException</code></pre>
+        <p>
+          Async "infects" upward: a plain synchronous class that depends on an
+          async factory is also resolved through the async path.
+        </p>
+
+        <h2>Async resources</h2>
+        <p>
+          A resource has a lifetime: a database session, a connection pool, an
+          HTTP client. Declare it as an <strong>async generator</strong> factory:
+        </p>
+        <pre><code>from typing import AsyncIterator
+
+async def db_session(pool: Pool) -> AsyncIterator[Session]:
+    session = await pool.acquire()
+    try:
+        yield session
+    finally:
+        await session.close()
+
+container.add_scoped_factory(Session, db_session)</code></pre>
+        <p>When the resource is finalized depends on its lifetime:</p>
+        <ul>
+          <li><strong>scoped / transient</strong> — finalized when its <code>AsyncScope</code> exits;</li>
+          <li><strong>singleton</strong> — lives until <code>await container.aclose()</code> at shutdown.</li>
+        </ul>
+        <p>Finalization is LIFO, like nested <code>async with</code> blocks.</p>
+
+        <h2>Async scopes</h2>
+        <p>
+          Open a scope with <code>async with</code>. Resources resolved inside are
+          closed when the block exits:
+        </p>
+        <pre><code>async def handle_request() -> None:
+    async with container.ascope() as scope:
+        service = await scope.aresolve(RegisterUser)
+        await service.execute(...)
+    # scoped resources finalized here, LIFO</code></pre>
+        <p>
+          <code>aresolve()</code> on the container (outside a scope) refuses to
+          open a scoped/transient resource it would have to finalize immediately;
+          resolve those inside <code>async with container.ascope()</code> instead.
+        </p>
+
+        <h2>FastAPI</h2>
+        <p>
+          Build the container once in lifespan, open one async scope per request,
+          and close singleton resources on shutdown:
+        </p>
+        <pre><code>@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.container = build_container()
+    yield
+    await app.state.container.aclose()
+
+async def request_scope(request: Request) -> AsyncIterator[AsyncScope]:
+    async with request.app.state.container.ascope() as scope:
+        yield scope
+
+async def get_service(scope: AsyncScope = Depends(request_scope)) -> RegisterUser:
+    return await scope.aresolve(RegisterUser)</code></pre>
+        <p>
+          Full runnable version:
+          <a href="https://github.com/vshulcz/injex/blob/main/examples/fastapi_async.py">examples/fastapi_async.py</a>.
+        </p>
+
+        <h2>Notes</h2>
+        <ul>
+          <li>The async path is interpreted (no compiled flat creator yet); the sync fast path is unaffected.</li>
+          <li>Cycle detection on the async path uses a per-resolution guard, so concurrent resolves don't interfere.</li>
+          <li>
+            A singleton async resource lives until <code>aclose()</code>. In tests, run the resolve
+            and <code>aclose()</code> in the <em>same</em> event loop — <code>asyncio.run()</code>
+            finalizes suspended async generators when it shuts the loop down.
+          </li>
+        </ul>
+
+        <nav class="pager" aria-label="Next pages">
+          <a href="./di-frameworks.html"><small>Next</small>DI framework comparison</a>
+          <a href="./fastapi-depends.html"><small>Related</small>FastAPI boundary</a>
+        </nav>
+      </article>
+    </main>
+    <footer class="site-footer">
+      <span>Injex documentation</span>
+      <span><a href="../">Home</a> · <a href="https://github.com/vshulcz/injex">GitHub</a></span>
+    </footer>
+  </body>
+</html>

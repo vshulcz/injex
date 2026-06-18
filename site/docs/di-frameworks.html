@@ -45,6 +45,7 @@
         <a href="./validation.html">Validation</a>
         <a href="./comparison.html">Comparison</a>
         <a href="./fastapi-depends.html">FastAPI boundary</a>
+        <a href="./async.html">Async</a>
         <a class="active" href="./di-frameworks.html">DI frameworks</a>
         <a href="./performance.html">Performance</a>
         <a href="./recipes.html">Recipes</a>
@@ -67,11 +68,14 @@
         <p>Pick a larger framework when you need any of these — Injex deliberately
           doesn't do them:</p>
         <ul>
-          <li><strong>Async resource lifecycle.</strong> Containers like
-            <code>dependency-injector</code> and Dishka open and close async resources
-            (connection pools, <code>async with</code>) as part of resolution. Injex
-            resolves objects; you manage async resource lifetimes yourself or via your
-            framework's lifespan.</li>
+          <li><strong>Framework-native scopes for async resources.</strong> Injex does
+            open and close async resources (connection pools,
+            <code>async def ... yield</code>) via <code>ascope()</code> /
+            <code>aclose()</code> — see <a href="./async.html">async resolution</a>.
+            What the larger frameworks add is deeper integration with framework-managed
+            request/session scopes; Dishka in particular wires its scopes directly into
+            FastAPI/Litestar. With Injex you open the scope yourself at the request
+            boundary.</li>
           <li><strong>A configuration/provider DSL.</strong> If wiring config values
             through provider objects is part of your architecture,
             <code>dependency-injector</code> is purpose-built for it.</li>

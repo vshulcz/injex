@@ -25,6 +25,12 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://vshulcz.github.io/injex/docs/async.html</loc>
+    <lastmod>2026-06-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://vshulcz.github.io/injex/docs/di-frameworks.html</loc>
     <lastmod>2026-06-12</lastmod>
     <changefreq>monthly</changefreq>

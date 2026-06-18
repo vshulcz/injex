@@ -7,8 +7,18 @@ and this project uses semantic versioning.
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-06-19
+
 ### Added
 
+- Typed `resolve()` / `resolve_all()` / `aresolve()` via `@overload`: passing a
+  type now infers that type (`resolve(Foo) -> Foo`, `resolve_all(Foo) -> list[Foo]`)
+  instead of `Any`, so resolved services stay type-checked at the call site. A
+  string interface still falls back to `Any`.
+- `aresolve()` on the container raises a clear error when asked to resolve a
+  scoped/transient async resource directly (which it would finalize immediately),
+  pointing at `async with container.ascope()`.
+- Docstrings on the public registration and scope methods.
 - Async resolution, sync-first and still zero-dependency. `await container.aresolve(T)`
   and `async with container.ascope() as scope: await scope.aresolve(T)` await
   `async def` factories and manage async resources: register an async-generator

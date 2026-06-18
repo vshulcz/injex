@@ -33,6 +33,7 @@
         <a href="./validation.html">Validation</a>
         <a href="./comparison.html">Comparison</a>
         <a href="./fastapi-depends.html">FastAPI boundary</a>
+        <a href="./async.html">Async</a>
         <a href="./di-frameworks.html">DI frameworks</a>
         <a href="./performance.html">Performance</a>
         <a href="./recipes.html">Recipes</a>
@@ -81,11 +82,32 @@
           <li><code>assert_valid()</code> raises <code>ContainerValidationException</code> if validation fails.</li>
         </ul>
 
+        <h2>Async</h2>
+        <p>
+          Async factories (<code>async def</code>) and async-generator resources use the
+          same <code>add_*_factory</code> methods and resolve through the async API.
+        </p>
+        <ul>
+          <li><code>await container.aresolve(interface, name=None)</code> resolves one
+            service, awaiting any async factory in the graph.</li>
+          <li><code>async with container.ascope() as scope:</code> opens an
+            <code>AsyncScope</code>; scoped/transient async resources resolved with
+            <code>await scope.aresolve(...)</code> are finalized LIFO on exit.</li>
+          <li><code>await container.aclose()</code> finalizes singleton async resources
+            at shutdown.</li>
+        </ul>
+        <p>
+          The synchronous <code>resolve()</code> raises
+          <code>AsyncResolutionRequiredException</code> if the graph needs async work.
+          See <a href="./async.html">async resolution</a>.
+        </p>
+
         <h2>Exceptions</h2>
         <p>
           <code>ServiceNotRegisteredException</code>, <code>CyclicDependencyException</code>,
           <code>MissingTypeAnnotationException</code>, <code>InvalidLifestyleException</code>,
-          and <code>ContainerValidationException</code> inherit from <code>DIException</code>.
+          <code>ContainerValidationException</code>, <code>AsyncResolutionRequiredException</code>,
+          and <code>PropertyInjectionException</code> inherit from <code>DIException</code>.
         </p>
 
         <nav class="pager" aria-label="Next pages">

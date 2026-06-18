@@ -84,6 +84,31 @@ def get_register_user(request: Request) -> RegisterUser:
 
 FastAPI adapts HTTP. The application owns service wiring.
 
+## Async resolution
+
+Injex resolves async dependencies through a separate opt-in path; the sync API is
+unchanged. Register a coroutine factory with `add_singleton_factory` /
+`add_*_factory`, or an async-generator resource, then resolve with `aresolve()` /
+`ascope()`. Async resources are finalized LIFO via the standard library's
+`AsyncExitStack` (still zero runtime dependencies): scoped/transient resources
+close when their `AsyncScope` exits, singletons live until `await container.aclose()`.
+The sync `resolve()` raises `AsyncResolutionRequiredException` if the graph needs
+async work, so an un-awaited object is never returned silently.
+
+```python
+async def db_session(settings: Settings):
+    pool = await open_pool(settings.database_url)
+    try:
+        yield pool
+    finally:
+        await pool.aclose()
+
+container.add_scoped_factory(Pool, db_session)
+
+async with container.ascope() as scope:
+    pool = await scope.aresolve(Pool)
+```
+
 ## Compared to larger DI frameworks
 
 Injex is smaller than provider-framework libraries. It is a fit when explicit
@@ -126,7 +151,7 @@ Injex's target shape. They are not a universal ranking.
 Reproduce:
 
 ```bash
-uv run --with punq --with lagom --with dependency-injector --with wireup \
+uv run --with punq --with lagom --with dependency-injector --with wireup --with dishka \
   python benchmarks/resolve_graph.py
 ```
 
@@ -138,6 +163,7 @@ uv run --with punq --with lagom --with dependency-injector --with wireup \
 - Docs: https://vshulcz.github.io/injex/docs/
 - Performance: https://vshulcz.github.io/injex/docs/performance.html
 - FastAPI Depends comparison: https://vshulcz.github.io/injex/docs/fastapi-depends.html
+- Async resolution: https://vshulcz.github.io/injex/docs/async.html
 - DI framework comparison: https://vshulcz.github.io/injex/docs/di-frameworks.html
 - Recipes: https://vshulcz.github.io/injex/docs/recipes.html
 - Article: https://vshulcz.hashnode.dev/where-should-dependency-wiring-live-in-a-python-app

@@ -9,10 +9,12 @@ decision, see the [comparison guide](./comparison.md).
 Pick a larger framework when you need any of these — Injex deliberately doesn't do
 them:
 
-- **Async resource lifecycle.** Containers like `dependency-injector` and Dishka can
-  open and close async resources (connection pools, `async with`) as part of
-  resolution. Injex resolves objects; you manage async resource lifetimes yourself
-  or via your framework's lifespan.
+- **Framework-native scopes for async resources.** Injex does open and close async
+  resources (connection pools, `async def ... yield`) via `ascope()` / `aclose()`
+  (see [async resolution](./async.md)). What the larger frameworks add on top is
+  deeper integration with framework-managed request/session scopes — Dishka in
+  particular wires its scopes directly into FastAPI/Litestar. With Injex you open
+  the scope yourself at the request boundary.
 - **A configuration/provider DSL.** If wiring config values through provider objects
   is part of your architecture, `dependency-injector` is purpose-built for it.
 - **Deep framework auto-wiring.** Dishka/Wireup can plug directly into FastAPI or
