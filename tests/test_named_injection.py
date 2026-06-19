@@ -95,3 +95,6 @@ def test_validate_reports_missing_named_dependency():
     c.add_transient(Service)
     errors = c.validate()
     assert len(errors) == 1
+    message = str(errors[0])
+    assert "DB" in message
+    assert "nope" in message  # the error names the missing registration

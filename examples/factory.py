@@ -1,30 +1,34 @@
-from abc import ABC, abstractmethod
+"""A factory builds a service when construction needs logic the constructor
+can't express. The factory's own parameters are injected too."""
 
 from injex import Container
 
 
-class IService(ABC):
-    @abstractmethod
-    def perform_action(self): ...
+class Settings:
+    def __init__(self) -> None:
+        self.pool_size = 5
 
 
-class Service(IService):
-    def __init__(self, config_value: str):
-        self.config_value = config_value
-
-    def perform_action(self):
-        print(f"Service is performing an action with config: {self.config_value}")
+class ConnectionPool:
+    def __init__(self, size: int) -> None:
+        self.size = size
 
 
-container = Container()
+def make_pool(settings: Settings) -> ConnectionPool:
+    # `settings` is injected; the factory turns it into the constructor argument.
+    return ConnectionPool(size=settings.pool_size)
 
 
-def service_factory():
-    config_value = "CustomConfigValue"
-    return Service(config_value)
+def main() -> None:
+    container = Container()
+    container.add_instance(Settings, Settings())
+    container.add_singleton_factory(ConnectionPool, make_pool)
+    container.assert_valid()
+
+    pool = container.resolve(ConnectionPool)
+    assert pool.size == 5
+    print("pool size from settings:", pool.size)
 
 
-container.register_factory(IService, service_factory)
-
-service = container.resolve(IService)
-service.perform_action()
+if __name__ == "__main__":
+    main()
