@@ -62,10 +62,12 @@ jobs:
           python-version: "3.13"
 
       - name: Install dependencies
-        run: uv sync --group fastapi
+        run: |
+          uv sync
+          uv pip install fastapi httpx "typing-extensions>=4.13"
 
       - name: Run type checks
-        run: uv run mypy injex tests
+        run: uv run --no-sync mypy injex tests
 
   test:
     name: Run Tests
@@ -119,10 +121,12 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: uv sync --group fastapi
+        run: |
+          uv sync
+          uv pip install fastapi httpx "typing-extensions>=4.13"
 
       - name: Run FastAPI integration tests
-        run: uv run pytest tests/test_ext_fastapi.py --no-cov
+        run: uv run --no-sync pytest tests/test_ext_fastapi.py --no-cov
 
   coverage:
     name: Upload Coverage to Codecov
