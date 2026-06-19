@@ -5,7 +5,9 @@ All notable changes to Injex are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses semantic versioning.
 
-## [Unreleased] — 1.6.0
+## [Unreleased]
+
+## [1.6.0] - 2026-06-19
 
 ### Added
 
