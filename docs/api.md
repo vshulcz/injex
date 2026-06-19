@@ -52,7 +52,10 @@ restores the original registration when the context exits.
 - `resolve(interface, name=None)`
 - `resolve_all(interface, name=None)`
 
-Use a scope for request, message, job, or command lifetimes.
+Use a scope for request, message, job, or command lifetimes. A scope is meant to
+be owned by one request/task — create one per request rather than sharing a
+single scope across threads. The container itself is thread-safe to resolve from;
+singletons are built once even under concurrent first resolves.
 
 ## Async
 
