@@ -60,7 +60,9 @@
               <tr><td><code>add_transient(interface, implementation=None, name=None)</code></td><td>Create a new instance on each resolve.</td></tr>
               <tr><td><code>add_scoped(interface, implementation=None, name=None)</code></td><td>Reuse one instance inside a scope.</td></tr>
               <tr><td><code>add_instance(interface, instance, name=None)</code></td><td>Register an already built object.</td></tr>
-              <tr><td><code>add_*_factory(interface, factory, name=None)</code></td><td>Use custom construction logic.</td></tr>
+              <tr><td><code>add_singleton_factory / add_transient_factory / add_scoped_factory(interface, factory, name=None)</code></td><td>Custom construction; a generator factory becomes a resource with teardown.</td></tr>
+              <tr><td><code>register / register_factory(interface, …, lifestyle="transient", name=None)</code></td><td>General forms the helpers wrap.</td></tr>
+              <tr><td><code>scan(*modules_or_iterables)</code></td><td>Register every <code>@injectable</code> class found.</td></tr>
             </tbody>
           </table>
         </div>
@@ -69,8 +71,15 @@
         <ul>
           <li><code>resolve(interface, name=None)</code> resolves one service.</li>
           <li><code>resolve_all(interface, name=None)</code> resolves registered implementations.</li>
-          <li><code>create_scope()</code> creates a request, job, or message lifetime.</li>
+          <li><code>call(func, **overrides)</code> calls a function with its annotated
+            parameters injected; <code>acall</code> is the async form.</li>
+          <li><code>create_scope()</code> creates a request, job, or message lifetime
+            (usable as a <code>with</code> block; finalizes scoped resources).</li>
         </ul>
+        <p>
+          To inject a named registration into a constructor, annotate it
+          <code>Annotated[T, Named("primary")]</code>.
+        </p>
 
         <h2>Overrides</h2>
         <pre><code>with container.override(PaymentGateway, instance=fake_gateway):
@@ -101,6 +110,24 @@
           <code>AsyncResolutionRequiredException</code> if the graph needs async work.
           See <a href="./async.html">async resolution</a>.
         </p>
+
+        <h2>Decorators and markers</h2>
+        <ul>
+          <li><code>@inject</code> — mark a method for property injection.</li>
+          <li><code>@injectable(lifestyle="transient", name=None, provides=None)</code> —
+            mark a class for <code>container.scan()</code>.</li>
+          <li><code>Named("name")</code> — inside <code>Annotated[T, Named("name")]</code>,
+            selects a named registration.</li>
+        </ul>
+
+        <h2>Integrations</h2>
+        <ul>
+          <li><code>injex.ext.fastapi</code>: <code>setup_injex(app, container)</code> +
+            <code>Provide(T)</code> — see
+            <a href="./fastapi-depends.html">FastAPI</a>. Install <code>injex[fastapi]</code>.</li>
+          <li><code>injex.ext.cli</code>: <code>Inject()</code> + <code>wire(container)</code>
+            for Typer/Click commands.</li>
+        </ul>
 
         <h2>Exceptions</h2>
         <p>

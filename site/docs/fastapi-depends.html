@@ -110,6 +110,27 @@ services.register_user.execute("ada@example.com")</code></pre>
           service wiring.
         </p>
 
+        <h2 id="optional-integration">Optional integration</h2>
+        <p>
+          If you'd rather not write the lifespan/scope glue by hand, the optional
+          <code>injex.ext.fastapi</code> integration (install
+          <code>injex[fastapi]</code>) opens one scope per request, finalizes its
+          resources when the request ends, and provides a <code>Provide</code>
+          dependency:
+        </p>
+        <pre><code>from injex.ext.fastapi import Provide, setup_injex
+
+setup_injex(app, container)
+
+@app.post("/register")
+def register_user(email: str, use_case: RegisterUser = Provide(RegisterUser)) -> int:
+    return use_case.execute(email)</code></pre>
+        <p>
+          It is a thin adapter over <code>ascope()</code>; the container stays
+          framework-agnostic, so the same wiring still serves workers, CLIs, and
+          tests.
+        </p>
+
         <nav class="pager" aria-label="Next pages">
           <a href="./di-frameworks.html"><small>Next</small>DI framework comparison</a>
           <a href="./recipes.html"><small>Example</small>Application wiring recipes</a>

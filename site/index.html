@@ -45,7 +45,7 @@
         "codeRepository": "https://github.com/vshulcz/injex",
         "programmingLanguage": "Python",
         "runtimePlatform": "Python 3.10, Python 3.11, Python 3.12, Python 3.13, Python 3.14",
-        "softwareVersion": "1.5.0",
+        "softwareVersion": "1.5.1",
         "applicationCategory": "DeveloperApplication",
         "description": "Tiny typed dependency injection for Python apps: explicit wiring, graph validation, zero runtime dependencies, and fast repeated resolves.",
         "keywords": "python dependency injection, python di container, FastAPI service wiring, Typer dependency injection, clean architecture Python, dependency injection benchmark",
@@ -270,7 +270,8 @@ service = container.resolve(Service)</code></pre>
           <span class="card-icon">★</span>
           <h3>Async, first-class</h3>
           <p><code>aresolve()</code> / <code>ascope()</code> await async factories
-            and async-resource lifecycles, on par with sync speed.</p>
+            and manage async-resource lifecycles; a fully-sync graph awaited this
+            way resolves at the sync fast-path speed.</p>
         </article>
         <article>
           <span class="card-icon">★</span>
@@ -389,15 +390,10 @@ service = container.resolve(Service)</code></pre>
             <strong>Fast dependency injection without a provider framework</strong>
             <small>The 1.3.0 article: boundary, benchmark, and trade-offs.</small>
           </a>
-          <a href="https://x.com/vshulcz_dev/status/2064249921570533567?s=20">
+          <a href="https://x.com/vshulcz_dev">
             <span>X</span>
-            <strong>Injex 1.3.0 launch post</strong>
-            <small>Release notes and benchmark snapshot for social sharing.</small>
-          </a>
-          <a href="https://x.com/vshulcz_dev/status/2059720295536009683?s=20">
-            <span>X</span>
-            <strong>Injex project thread</strong>
-            <small>The short thread about explicit typed wiring in Python.</small>
+            <strong>Updates on X</strong>
+            <small>Release notes and notes on explicit typed wiring in Python.</small>
           </a>
         </div>
       </section>
