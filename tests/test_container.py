@@ -126,8 +126,7 @@ class TestContainer(unittest.TestCase):
         with self.assertRaises(MissingTypeAnnotationException) as context:
             self.container.resolve(ServiceE)
         self.assertIn(
-            "Missing type annotation for parameter 'missing_annotation' "
-            "in class 'ServiceE'.",
+            "Missing type annotation for parameter 'missing_annotation' in 'ServiceE'.",
             str(context.exception),
         )
 

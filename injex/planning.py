@@ -25,15 +25,19 @@ class Named:
     name: str
 
 
+_INJECT_FLAG = "__injex_inject__"
+
+
 def inject(func: Callable[..., Any]) -> Callable[..., Any]:
-    func.__annotations__["_inject"] = True
+    """Mark a method for property injection (its return type is resolved and set
+    as an attribute). Kept off ``__annotations__`` so it never leaks into
+    ``get_type_hints``."""
+    setattr(func, _INJECT_FLAG, True)
     return func
 
 
 def is_injectable(func: Callable[..., Any]) -> bool:
-    return hasattr(func, "__annotations__") and func.__annotations__.get(
-        "_inject", False
-    )
+    return getattr(func, _INJECT_FLAG, False)
 
 
 @cache

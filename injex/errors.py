@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Any
 
 
 class DIException(Exception):
@@ -16,15 +17,16 @@ class ServiceNotRegisteredException(DIException):
 
 
 class CyclicDependencyException(DIException):
-    def __init__(self, cls: type):
+    def __init__(self, cls: type | str):
         super().__init__(f"Cyclic dependency detected: {_describe_service(cls)}.")
 
 
 class MissingTypeAnnotationException(DIException):
-    def __init__(self, param_name: str, cls: type):
+    # `owner` is the class or function that declared the parameter.
+    def __init__(self, param_name: str, owner: Any):
         super().__init__(
             f"Missing type annotation for parameter '{param_name}' "
-            f"in class '{cls.__name__}'."
+            f"in '{getattr(owner, '__name__', owner)}'."
         )
 
 

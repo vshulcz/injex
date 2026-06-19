@@ -46,6 +46,16 @@ from .registry import (
 
 _MISSING = object()
 
+_VALID_LIFESTYLES = frozenset(
+    {LifeStyle.TRANSIENT, LifeStyle.SINGLETON, LifeStyle.SCOPED}
+)
+
+
+def _ensure_valid_lifestyle(lifestyle: str) -> None:
+    if lifestyle not in _VALID_LIFESTYLES:
+        raise InvalidLifestyleException(lifestyle)
+
+
 T = TypeVar("T")
 
 
@@ -226,12 +236,7 @@ class Container:
     ) -> None:
         """Register a class. ``implementation`` defaults to ``interface``.
         Dependencies are read from the constructor's type hints."""
-        if lifestyle not in (
-            LifeStyle.TRANSIENT,
-            LifeStyle.SINGLETON,
-            LifeStyle.SCOPED,
-        ):
-            raise InvalidLifestyleException(lifestyle)
+        _ensure_valid_lifestyle(lifestyle)
         if implementation is None:
             implementation = interface
         key = (interface, name)
@@ -255,12 +260,7 @@ class Container:
         (``async def ... yield``) are supported via aresolve()/ascope()."""
         if not callable(factory):
             raise ValueError("Factory must be callable")
-        if lifestyle not in (
-            LifeStyle.TRANSIENT,
-            LifeStyle.SINGLETON,
-            LifeStyle.SCOPED,
-        ):
-            raise InvalidLifestyleException(lifestyle)
+        _ensure_valid_lifestyle(lifestyle)
         key = (interface, name)
         registration = Registration(
             kind=RegistrationType.FACTORY, factory=factory, lifestyle=lifestyle
@@ -304,12 +304,7 @@ class Container:
                 "Provide only one override target: "
                 "implementation, factory, or instance."
             )
-        if lifestyle not in (
-            LifeStyle.TRANSIENT,
-            LifeStyle.SINGLETON,
-            LifeStyle.SCOPED,
-        ):
-            raise InvalidLifestyleException(lifestyle)
+        _ensure_valid_lifestyle(lifestyle)
 
         if instance is not None:
             registration = Registration(
@@ -1393,9 +1388,9 @@ class Container:
                 LifeStyle.SCOPED,
             ):
                 raise ValueError(
-                    f"{interface} is a {registration.lifestyle} async resource; "
-                    "aresolve() would finalize it immediately. Resolve it inside "
-                    "'async with container.ascope() as scope: "
+                    f"{_describe_service(interface)} is a {registration.lifestyle} "
+                    "async resource; aresolve() would finalize it immediately. "
+                    "Resolve it inside 'async with container.ascope() as scope: "
                     "await scope.aresolve(...)'."
                 )
 
