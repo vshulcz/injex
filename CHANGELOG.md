@@ -11,6 +11,12 @@ and this project uses semantic versioning.
 
 ### Added
 
+- FastAPI integration (`injex.ext.fastapi`, optional extra `injex[fastapi]`).
+  `setup_injex(app, container)` opens one Injex scope per request and finalizes
+  its resources when the request ends (and closes singleton resources on
+  shutdown); `Provide(Service)` resolves a service into a route through FastAPI's
+  own `Depends`. Thin glue over `ascope()` — the core stays framework-agnostic
+  and dependency-free.
 - Sync resources with teardown. A generator factory (`def f(...): ...; yield x;
   cleanup()`) is finalized when its scope exits (scoped/transient) or on
   `container.close()` (singleton); the container is now a context manager too.

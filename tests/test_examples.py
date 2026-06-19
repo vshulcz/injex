@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 EXAMPLES = Path(__file__).resolve().parents[1] / "examples"
-_NEEDS_FASTAPI = {"fastapi_app", "fastapi_async", "fastapi_lifespan"}
+_NEEDS_FASTAPI = {"fastapi_app", "fastapi_async", "fastapi_lifespan", "fastapi_ext"}
 
 example_files = sorted(p for p in EXAMPLES.glob("*.py") if p.stem != "__init__")
 
