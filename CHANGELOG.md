@@ -7,6 +7,15 @@ and this project uses semantic versioning.
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-06-19
+
+### Fixed
+
+- Thread-safe singleton construction. Concurrent first resolves of the same
+  singleton could each build it, handing different threads different instances.
+  Construction is now guarded by a reentrant lock with a lock-free fast path, so
+  a singleton is built once; the warm resolve path is unchanged.
+
 ## [1.5.0] - 2026-06-19
 
 ### Changed
