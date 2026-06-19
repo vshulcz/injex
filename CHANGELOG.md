@@ -11,26 +11,12 @@ and this project uses semantic versioning.
 
 ### Changed
 
-- Faster repeated resolves via singleton constant-inlining. The compiled sync and
-  async creators now realize a scope-free singleton once at build time and inline
-  the instance as a constant, so the generated code constructs the transient spine
-  with no per-resolve getter calls. On the project benchmark sync `resolve()` drops
-  from `0.40` to `0.33 µs/op` (1.25× manual wiring), and singleton-heavy graphs
-  improve by ~60%. The resolve/`aresolve` dispatch was also tightened (single dict
-  lookup, interface-keyed async cache, cache-checked async singletons). Singleton
-  identity, laziness, and override/invalidation semantics are unchanged.
-- Compiled async resolution. `aresolve()` now compiles a flat `async` creator
-  that inlines the synchronous parts of a graph and awaits only the genuinely
-  async nodes, instead of walking the graph with a coroutine per node:
-  - a graph with no async factories reuses the synchronous compiled creator and
-    drops from `~5.1 µs/op` to `~0.44 µs/op` (on par with sync `resolve()`) — the
-    common FastAPI shape of awaiting `aresolve()` on plain classes;
-  - a graph with an `async def` factory drops from `~3.0 µs/op` to `~1.2 µs/op`
-    on the project benchmark.
-
-  See `benchmarks/resolve_async.py` for a reproducible cross-library comparison.
-  Async resources keep their LIFO finalization semantics; graphs that can't be
-  flattened fall back to the previous interpreted async walk.
+- Faster repeated resolves. The compiled creator now realizes scope-free
+  singletons once at build time and inlines them as constants, so resolving a
+  graph runs its constructors with no per-resolve getter calls. Sync `resolve()`
+  drops from `0.40` to `0.33 µs/op` (1.25× manual wiring) on the project
+  benchmark; singleton-heavy graphs improve ~60%. Singleton identity, laziness,
+  and override semantics are unchanged.
 
 ### Added
 
@@ -42,20 +28,20 @@ and this project uses semantic versioning.
   scoped/transient async resource directly (which it would finalize immediately),
   pointing at `async with container.ascope()`.
 - Docstrings on the public registration and scope methods.
-- Async resolution, sync-first and still zero-dependency. `await container.aresolve(T)`
+- Async resolution, zero-dependency and sync-first. `await container.aresolve(T)`
   and `async with container.ascope() as scope: await scope.aresolve(T)` await
-  `async def` factories and manage async resources: register an async-generator
-  factory (`async def f(...): ...; yield x; await cleanup()`) and the yielded value
-  is finalized when its scope exits (scoped/transient) or on `await container.aclose()`
-  (singleton), via a stdlib `AsyncExitStack`. The sync `resolve()` raises a clear
-  `AsyncResolutionRequiredException` if the graph needs async work. Cycle detection
-  on the async path uses a per-resolution guard (safe under concurrent resolves).
-  The synchronous fast path is untouched — same compiled creators, same ~0.4 µs/op.
+  `async def` factories and manage async-generator resources (`yield` then
+  `await cleanup()`), finalized when the scope exits, or on
+  `await container.aclose()` for singletons, via a stdlib `AsyncExitStack`.
+  `aresolve()` compiles a flat async creator that inlines the synchronous parts of
+  the graph and awaits only the genuinely async nodes: a fully-sync graph resolves
+  at sync speed (~0.44 µs/op), a graph with an `async def` factory at ~1.2 µs/op.
+  Sync `resolve()` raises `AsyncResolutionRequiredException` if the graph needs
+  async work, and is itself untouched. See `benchmarks/resolve_async.py`.
 - `PropertyInjectionException` with a clear message when property injection
-  (`@inject` methods) targets a `__slots__` type or a frozen dataclass, instead
-  of a raw `AttributeError` / `FrozenInstanceError`. Constructor injection into
-  such types already worked (the compiled path calls the constructor directly and
-  never sets attributes) and is unaffected; the hot path is untouched.
+  (`@inject` methods) targets a `__slots__` type or a frozen dataclass, instead of
+  a raw `AttributeError` / `FrozenInstanceError`. Constructor injection into those
+  types is unaffected.
 
 ## [1.4.0] - 2026-06-12
 
