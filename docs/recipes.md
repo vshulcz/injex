@@ -10,6 +10,8 @@ Keep the container at application startup. Request handlers should receive use
 cases from FastAPI dependencies, not build repositories and clients themselves.
 
 ```python
+from collections.abc import Iterator
+
 from fastapi import Depends, FastAPI
 
 from injex import Container, Scope
@@ -39,8 +41,10 @@ container = build_container()
 app = FastAPI()
 
 
-def get_scope() -> Scope:
-    return container.create_scope()
+def get_scope() -> Iterator[Scope]:
+    # `with` finalizes scoped resources (e.g. a DB session) when the request ends.
+    with container.create_scope() as scope:
+        yield scope
 
 
 def get_register_user(scope: Scope = Depends(get_scope)) -> RegisterUser:

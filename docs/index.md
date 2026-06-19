@@ -40,8 +40,6 @@ framework-sized dependency injection container.
   hand-written `factories.py` to Injex without changing application classes.
 - [Async resolution](./async.md): async factories, async resources with
   scope/lifecycle finalization, and the FastAPI per-request pattern.
-- [Usage scenarios](./usage-scenarios.md): where Injex fits in services, CLIs,
-  workers, and tests.
 - [Container validation](./validation.md): check wiring before startup without
   creating service instances.
 - [API reference](./api.md): public methods, exceptions, and import surface.

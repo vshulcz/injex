@@ -5,8 +5,8 @@
 Passing collaborators into a constructor is just `__init__(self, repo, mailer)` —
 plain Python, no magic. The only thing a container adds is *automating the wiring*
 and *checking it*. Injex does that from your existing type hints, with no decorators,
-no global state, and no import-time side effects. You can print the graph and see
-exactly what resolves to what.
+no global state, and no import-time side effects. The wiring is just your
+registration list plus plain constructor annotations — nothing hidden to trace.
 
 So Injex isn't trying to make Python feel like Java. It's trying to remove one
 specific kind of busywork: hand-wiring the same object graph in several places and

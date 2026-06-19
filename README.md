@@ -243,7 +243,10 @@ flowchart LR
 | Temporary test overrides | ✅ | ✅ | ❌ | ✅ |
 | **Graph validation without constructing services** | ✅ | ❌ | ❌ | ❌ |
 
-For a deeper, fair comparison see [Injex vs other DI options](./docs/comparison.md).
+This table contrasts Injex with the minimal containers. For an honest head-to-head
+with the modern full-featured ones — **dishka** and **Wireup** — see
+[compared to larger DI frameworks](./docs/di-frameworks.md) and the
+[comparison guide](./docs/comparison.md).
 
 ## API at a glance
 
