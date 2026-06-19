@@ -49,16 +49,19 @@ framework-sized dependency injection container.
 ## Examples
 
 - [Clean architecture](../examples/clean_architecture.py)
-- [CLI application](../examples/cli_app.py)
-- [FastAPI lifespan](../examples/fastapi_lifespan.py)
-- [Testing overrides](../examples/testing.py)
-- [Scoped services](../examples/scoped.py)
-- [Factories](../examples/factory.py)
-- [Named registrations](../examples/named.py)
-- [Optional dependencies](../examples/optional.py)
-- [Property injection](../examples/property.py)
-- [Cycle detection](../examples/cyclic.py)
-- [Interface integration](../examples/integration.py)
+- [Auto-registration with scan()](../examples/scan.py)
+- [Factories](../examples/factory.py) ·
+  [Resources with teardown](../examples/resources.py) ·
+  [Scoped services](../examples/scoped.py)
+- [Config injection](../examples/config_injection.py) ·
+  [Testing overrides](../examples/testing.py)
+- [FastAPI integration](../examples/fastapi_ext.py) ·
+  [Async FastAPI](../examples/fastapi_async.py) ·
+  [FastAPI lifespan](../examples/fastapi_lifespan.py)
+- [CLI injection](../examples/cli_injection.py) ·
+  [CLI application](../examples/cli_app.py)
+- [Validation catches a cycle](../examples/cyclic.py) ·
+  [Combined features](../examples/integration.py)
 
 ## Articles and launch notes
 

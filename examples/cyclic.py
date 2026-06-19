@@ -1,4 +1,7 @@
-from injex import Container, CyclicDependencyException
+"""A dependency cycle is reported up front by validate() / assert_valid(),
+before any instance is constructed."""
+
+from injex import Container, ContainerValidationException
 
 
 class ServiceA:
@@ -11,36 +14,20 @@ class ServiceB:
         self.service_a = service_a
 
 
-container = Container()
+def main() -> None:
+    container = Container()
+    container.add_transient(ServiceA)
+    container.add_transient(ServiceB)
 
-container.register(ServiceA)
-container.register(ServiceB)
+    # validate() finds the cycle without constructing anything.
+    errors = container.validate()
+    print("validation errors:", [str(e) for e in errors])
 
-try:
-    service_a = container.resolve(ServiceA)
-except CyclicDependencyException as e:
-    print(f"Cyclic dependency detected: {e}")
-
-
-class NewServiceB:
-    def __init__(self):
-        pass
-
-    def do_something(self):
-        print("New Service B is doing something.")
+    try:
+        container.assert_valid()
+    except ContainerValidationException as exc:
+        print("startup guard refused to run:", exc.errors[0])
 
 
-class NewServiceA:
-    def __init__(self, service_b: NewServiceB):
-        self.service_b = service_b
-
-    def perform_action(self):
-        print("New Service A is performing an action.")
-        self.service_b.do_something()
-
-
-container.register(NewServiceA)
-container.register(NewServiceB)
-
-new_service_a = container.resolve(NewServiceA)
-new_service_a.perform_action()
+if __name__ == "__main__":
+    main()

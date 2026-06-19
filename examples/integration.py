@@ -1,74 +1,75 @@
-from abc import ABC, abstractmethod
+"""One graph combining several features: a factory-built scoped dependency, an
+optional dependency, and property injection — resolved inside a scope."""
 
-from injex import Container, LifeStyle, inject
+from typing import Protocol
 
-
-class IDatabaseConnection(ABC):
-    @abstractmethod
-    def execute_query(self, query: str): ...
+from injex import Container, inject
 
 
-class MySQLConnection(IDatabaseConnection):
-    def execute_query(self, query: str):
-        print(f"MySQL executing query: {query}")
+class Database(Protocol):
+    def query(self, sql: str) -> str: ...
 
 
-class PostgreSQLConnection(IDatabaseConnection):
-    def execute_query(self, query: str):
-        print(f"PostgreSQL executing query: {query}")
+class PostgresDatabase:
+    def query(self, sql: str) -> str:
+        return f"postgres: {sql}"
 
 
-class ICache(ABC):
-    @abstractmethod
-    def get(self, key: str): ...
+class Cache(Protocol):
+    def get(self, key: str) -> str | None: ...
 
 
-class RedisCache(ICache):
-    def get(self, key: str):
-        print(f"RedisCache getting key: {key}")
+class MemoryCache:
+    def __init__(self) -> None:
+        self.store: dict[str, str] = {}
+
+    def get(self, key: str) -> str | None:
+        return self.store.get(key)
+
+
+class Logger:
+    def __init__(self) -> None:
+        self.messages: list[str] = []
+
+    def log(self, message: str) -> None:
+        self.messages.append(message)
 
 
 class DataService:
-    def __init__(self, db_connection: IDatabaseConnection, cache: ICache | None = None):
-        self.db_connection = db_connection
+    def __init__(self, db: Database, cache: Cache | None = None):
+        self.db = db
         self.cache = cache
 
     @inject
-    def logger(self) -> "ILogger": ...
+    def logger(self) -> Logger:  # property injection
+        ...
 
-    def get_data(self, key: str):
-        if self.cache:
+    def get(self, key: str) -> str:
+        if self.cache is not None:
             self.cache.get(key)
-        self.db_connection.execute_query(f"SELECT * FROM data WHERE key = '{key}'")
-        self.logger.log(f"Data retrieved for key: {key}")
+        result = self.db.query(f"select * from data where key = '{key}'")
+        self.logger.log(f"read {key}")
+        return result
 
 
-class ILogger(ABC):
-    @abstractmethod
-    def log(self, message: str): ...
+def make_database() -> Database:
+    # In a real app the implementation is chosen from config or env.
+    return PostgresDatabase()
 
 
-class FileLogger(ILogger):
-    def log(self, message: str):
-        with open("data_service.log", "a") as f:
-            f.write(f"{message}\n")
+def main() -> None:
+    container = Container()
+    container.add_scoped_factory(Database, make_database)
+    container.add_singleton(Cache, MemoryCache)
+    container.add_singleton(Logger)
+    container.add_transient(DataService)
+    container.assert_valid()
+
+    with container.create_scope() as scope:
+        service = scope.resolve(DataService)
+        print(service.get("alice"))
+        print("logged:", service.logger.messages)
 
 
-def db_connection_factory() -> IDatabaseConnection:
-    # Choose the implementation from config, env, etc.
-    return MySQLConnection()
-
-
-container = Container()
-
-container.register_factory(
-    IDatabaseConnection, db_connection_factory, lifestyle=LifeStyle.SCOPED
-)
-container.register(ICache, RedisCache, lifestyle=LifeStyle.SINGLETON)
-container.register(ILogger, FileLogger, lifestyle=LifeStyle.SINGLETON)
-container.register(DataService)
-
-scope = container.create_scope()
-
-data_service = scope.resolve(DataService)
-data_service.get_data("Test")
+if __name__ == "__main__":
+    main()

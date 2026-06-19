@@ -670,12 +670,14 @@ class Container:
         if not registrations:
             if is_optional or has_default:
                 return []
+            described = _describe_service(dependency_type)
+            if dep_name is not None:
+                described += f" named '{dep_name}'"
             return [
                 ValidationError(
                     source_key[0],
                     source_key[1],
-                    f"Dependency '{dependency_name}' is not registered: "
-                    f"{_describe_service(dependency_type)}.",
+                    f"Dependency '{dependency_name}' is not registered: {described}.",
                 )
             ]
 
