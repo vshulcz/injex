@@ -27,7 +27,14 @@ classifiers = [
 keywords = ["dependency-injection", "di", "container", "ioc", "clean-architecture", "testing"]
 dependencies = []
 
+[project.optional-dependencies]
+fastapi = ["fastapi>=0.100"]
+
 [tool.uv]
+# fastapi/httpx are intentionally NOT here: the type-check and FastAPI jobs add
+# them per-run with `uv run --with`, so the main test matrix (incl. Python 3.14,
+# where pydantic-core has no wheel yet) never builds pydantic. The integration
+# tests skip when FastAPI is absent.
 dev-dependencies = [
     "mypy>=1.12.1",
     "pytest-cov>=6.0.0",
@@ -55,8 +62,10 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 [tool.ruff.lint.per-file-ignores]
 # FastAPI's Depends() in argument defaults is the documented idiom.
 "examples/*" = ["B008"]
-# Abstract-base test fixtures intentionally have no abstract methods.
-"tests/*" = ["B024"]
+"injex/ext/fastapi.py" = ["B008"]
+# B024: abstract-base test fixtures intentionally have no abstract methods.
+# B008: FastAPI's Depends()/Provide() in defaults is the documented idiom.
+"tests/*" = ["B024", "B008"]
 
 [tool.mypy]
 python_version = "3.10"

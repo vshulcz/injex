@@ -48,7 +48,7 @@ class _NotFlat(Exception):
 
 
 class Scope:
-    __slots__ = ("container", "_scoped_instances", "_stack")
+    __slots__ = ("_scoped_instances", "_stack", "container")
 
     def __init__(self, container: "Container"):
         self.container = container
@@ -95,7 +95,7 @@ class AsyncScope:
     """Async resolution scope. Async resources opened inside it are finalized
     (LIFO) when the scope exits."""
 
-    __slots__ = ("container", "_scoped_instances", "_stack")
+    __slots__ = ("_scoped_instances", "_stack", "container")
 
     def __init__(self, container: "Container"):
         self.container = container
@@ -133,18 +133,18 @@ class AsyncScope:
 
 class Container:
     __slots__ = (
-        "_registrations",
-        "_singletons",
-        "_version",
-        "_noscope_creators",
-        "_async_stack",
-        "_resolving_local",
-        "_async_resource_keys",
         "_async_creators",
-        "_singleton_lock",
         "_async_inflight",
-        "_sync_stack",
+        "_async_resource_keys",
+        "_async_stack",
+        "_noscope_creators",
+        "_registrations",
+        "_resolving_local",
+        "_singleton_lock",
+        "_singletons",
         "_sync_resource_keys",
+        "_sync_stack",
+        "_version",
     )
 
     def __init__(self) -> None:

@@ -76,3 +76,24 @@ def register_user(
 ) -> int:
     return use_case.execute(email)
 ```
+
+## Optional integration
+
+If you'd rather not write the lifespan/scope glue yourself, the optional
+`injex.ext.fastapi` integration (install with `pip install injex[fastapi]`) does
+it for you: one Injex scope per request, resources finalized when the request
+ends, and a `Provide` dependency.
+
+```python
+from injex.ext.fastapi import Provide, setup_injex
+
+setup_injex(app, container)  # per-request scope + shutdown finalization
+
+@app.post("/register")
+def register_user(email: str, use_case: RegisterUser = Provide(RegisterUser)) -> int:
+    return use_case.execute(email)
+```
+
+It's a thin adapter over `ascope()`; the container stays framework-agnostic, so
+the same wiring still serves workers, CLIs, and tests. Full example:
+[`examples/fastapi_ext.py`](../examples/fastapi_ext.py).

@@ -20,18 +20,18 @@ class RegistrationType:
 
 class Registration:
     __slots__ = (
-        "kind",
-        "implementation",
         "factory",
-        "instance",
-        "lifestyle",
-        "plan",
         "fast_creator",
-        "fast_creator_version",
         "fast_creator_needs_scope",
+        "fast_creator_version",
+        "implementation",
+        "instance",
         "is_async",
         "is_resource",
         "is_sync_resource",
+        "kind",
+        "lifestyle",
+        "plan",
     )
 
     def __init__(
