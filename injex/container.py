@@ -36,7 +36,13 @@ from .planning import (
     _normalize_dependency_type,
     _ServicePlan,
 )
-from .registry import LifeStyle, OverrideContext, Registration, RegistrationType
+from .registry import (
+    _SCAN_ATTR,
+    LifeStyle,
+    OverrideContext,
+    Registration,
+    RegistrationType,
+)
 
 _MISSING = object()
 
@@ -424,6 +430,35 @@ class Container:
         """Open a sync scope. Scoped services are cached per-scope; for async
         resources use ``async with container.ascope()`` instead."""
         return Scope(self)
+
+    def scan(self, *sources: Any) -> None:
+        """Register every ``@injectable`` class found in the given modules.
+
+        Pass modules (only classes *defined* there are registered, not imported
+        ones) or any iterable of classes. Registration is explicit — it happens
+        here, not as an import side effect.
+        """
+        for source in sources:
+            if inspect.ismodule(source):
+                candidates = [
+                    obj
+                    for obj in vars(source).values()
+                    if isinstance(obj, type)
+                    and getattr(obj, "__module__", None) == source.__name__
+                ]
+            else:
+                candidates = list(source)
+            for obj in candidates:
+                info = obj.__dict__.get(_SCAN_ATTR)
+                if info is None:
+                    continue
+                interface = info["provides"] or obj
+                self.register(
+                    interface,
+                    obj,
+                    lifestyle=info["lifestyle"],
+                    name=info["name"],
+                )
 
     def call(self, func: Callable[..., T], /, **overrides: Any) -> T:
         """Call ``func``, injecting its annotated parameters from the container.

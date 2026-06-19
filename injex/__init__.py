@@ -55,6 +55,9 @@ from .registry import (
 from .registry import (
     RegistrationType as RegistrationType,
 )
+from .registry import (
+    injectable as injectable,
+)
 
 __all__ = [
     "AsyncResolutionRequiredException",
@@ -72,4 +75,5 @@ __all__ = [
     "ServiceNotRegisteredException",
     "ValidationError",
     "inject",
+    "injectable",
 ]

@@ -11,6 +11,11 @@ and this project uses semantic versioning.
 
 ### Added
 
+- Auto-registration: mark classes with `@injectable` (optionally
+  `lifestyle=`, `name=`, `provides=`) and register them in one call with
+  `container.scan(module)` or `container.scan([Class, ...])`. Scanning a module
+  registers only classes defined there, and nothing is registered as an import
+  side effect — registration stays explicit.
 - FastAPI integration (`injex.ext.fastapi`, optional extra `injex[fastapi]`).
   `setup_injex(app, container)` opens one Injex scope per request and finalizes
   its resources when the request ends (and closes singleton resources on
