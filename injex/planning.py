@@ -4,6 +4,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from functools import cache
 from typing import (
+    Annotated,
     Any,
     Union,
     cast,
@@ -11,6 +12,17 @@ from typing import (
     get_origin,
     get_type_hints,
 )
+
+
+@dataclass(frozen=True)
+class Named:
+    """Marker for an `Annotated` dependency that selects a named registration.
+
+    ``def __init__(self, db: Annotated[Database, Named("primary")]): ...``
+    injects the registration made with ``name="primary"``.
+    """
+
+    name: str
 
 
 def inject(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -33,7 +45,8 @@ def _cached_parameters(
 
 @cache
 def _cached_type_hints(func: Callable[..., Any]) -> dict[str, Any]:
-    return get_type_hints(func)
+    # include_extras keeps Annotated metadata so Named(...) markers survive.
+    return get_type_hints(func, include_extras=True)
 
 
 def _get_parameters(
@@ -91,14 +104,26 @@ class _FactoryPlan:
     dependencies: tuple[_DependencyPlan, ...]
 
 
-def _normalize_dependency_type(dependency_type: Any) -> tuple[Any, bool]:
+def _unwrap_annotated(dependency_type: Any) -> tuple[Any, str | None]:
+    """Strip an ``Annotated`` wrapper, returning the type and any ``Named``."""
+    if get_origin(dependency_type) is Annotated:
+        args = get_args(dependency_type)
+        name = next((m.name for m in args[1:] if isinstance(m, Named)), None)
+        return args[0], name
+    return dependency_type, None
+
+
+def _normalize_dependency_type(dependency_type: Any) -> tuple[Any, bool, str | None]:
+    dependency_type, name = _unwrap_annotated(dependency_type)
     origin = get_origin(dependency_type)
     if origin in (Union, types.UnionType):
         args = get_args(dependency_type)
         if type(None) in args:
             non_none_args = [arg for arg in args if arg is not type(None)]
-            return (non_none_args[0] if non_none_args else Any, True)
-    return dependency_type, False
+            inner = non_none_args[0] if non_none_args else Any
+            inner, inner_name = _unwrap_annotated(inner)
+            return inner, True, (name or inner_name)
+    return dependency_type, False, name
 
 
 @cache
@@ -131,10 +156,12 @@ def _cached_callable_plan(
             continue
 
         dependency_type = type_hints.get(name, param.annotation)
-        dependency_type, is_optional = _normalize_dependency_type(dependency_type)
+        dependency_type, is_optional, dep_name = _normalize_dependency_type(
+            dependency_type
+        )
         dependency_key = None
         if dependency_type != inspect.Parameter.empty:
-            dependency_key = (dependency_type, None)
+            dependency_key = (dependency_type, dep_name)
         dependencies.append(
             _DependencyPlan(
                 name=name,
@@ -179,10 +206,12 @@ def _get_callable_plan(
                 continue
 
             dependency_type = type_hints.get(name, param.annotation)
-            dependency_type, is_optional = _normalize_dependency_type(dependency_type)
+            dependency_type, is_optional, dep_name = _normalize_dependency_type(
+                dependency_type
+            )
             dependency_key = None
             if dependency_type != inspect.Parameter.empty:
-                dependency_key = (dependency_type, None)
+                dependency_key = (dependency_type, dep_name)
             dependencies.append(
                 _DependencyPlan(
                     name=name,
@@ -203,12 +232,14 @@ def _cached_property_dependencies(cls: type) -> tuple[_DependencyPlan, ...]:
         type_hints = _cached_type_hints(attr)
         dependency_type = type_hints.get("return")
         if dependency_type is not None and dependency_type != inspect.Parameter.empty:
-            dependency_type, is_optional = _normalize_dependency_type(dependency_type)
+            dependency_type, is_optional, dep_name = _normalize_dependency_type(
+                dependency_type
+            )
             dependencies.append(
                 _DependencyPlan(
                     name=name,
                     dependency_type=dependency_type,
-                    dependency_key=(dependency_type, None),
+                    dependency_key=(dependency_type, dep_name),
                     has_default=False,
                     default=inspect.Parameter.empty,
                     is_optional=is_optional,

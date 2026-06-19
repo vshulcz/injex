@@ -16,6 +16,10 @@ from .errors import (
     _describe_service as _describe_service,
 )
 from .planning import (
+    Named,
+    inject,
+)
+from .planning import (
     _cached_callable_plan as _cached_callable_plan,
 )
 from .planning import (
@@ -35,9 +39,6 @@ from .planning import (
 )
 from .planning import (
     _make_fast_raw_creator as _make_fast_raw_creator,
-)
-from .planning import (
-    inject,
 )
 from .planning import (
     is_injectable as is_injectable,
@@ -65,6 +66,7 @@ __all__ = [
     "InvalidLifestyleException",
     "LifeStyle",
     "MissingTypeAnnotationException",
+    "Named",
     "PropertyInjectionException",
     "Scope",
     "ServiceNotRegisteredException",
