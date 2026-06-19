@@ -18,6 +18,35 @@ class RegistrationType:
     INSTANCE = "instance"
 
 
+_SCAN_ATTR = "__injex_register__"
+
+
+def injectable(
+    cls: type | None = None,
+    *,
+    lifestyle: str = LifeStyle.TRANSIENT,
+    name: str | None = None,
+    provides: type | None = None,
+) -> Any:
+    """Mark a class for `container.scan()` to register automatically.
+
+    Usable bare (`@injectable`) or with options
+    (`@injectable(lifestyle="singleton", provides=Repository)`). Registration
+    still only happens when you call `container.scan(module)` — nothing is
+    registered as a side effect of import.
+    """
+
+    def wrap(target: type) -> type:
+        setattr(
+            target,
+            _SCAN_ATTR,
+            {"lifestyle": lifestyle, "name": name, "provides": provides},
+        )
+        return target
+
+    return wrap if cls is None else wrap(cls)
+
+
 class Registration:
     __slots__ = (
         "factory",

@@ -100,6 +100,37 @@ with container.create_scope() as scope:
     session = scope.resolve(Session)  # closed when the block exits
 ```
 
+## Auto-registration
+
+For larger apps, marking classes and registering them in one call beats a long
+list of `add_*` lines. Decorate with `@injectable` and `scan` a module:
+
+```python
+from injex import Container, injectable
+
+
+@injectable                          # transient by default
+class UserRepository: ...
+
+
+@injectable(lifestyle="singleton")
+class ApiClient: ...
+
+
+@injectable(provides=Notifier, name="email")
+class EmailNotifier(Notifier): ...
+
+
+import myapp.services
+container = Container()
+container.scan(myapp.services)        # registers the marked classes above
+```
+
+`scan` registers only classes *defined* in the module (not imported ones), and
+nothing happens until you call it — `@injectable` is just a marker, so importing
+a module never registers anything behind your back. You can also pass an explicit
+list: `container.scan([UserRepository, ApiClient])`.
+
 ## Existing instances
 
 If you already hold an object, register it directly. It is treated as a
