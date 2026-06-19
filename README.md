@@ -138,13 +138,13 @@ faster than several popular containers on the same machine:
 
 | Library | Median resolve time |
 | --- | ---: |
-| manual wiring | `0.264 µs/op` |
-| **Injex** | **`0.407 µs/op`** |
-| dishka | `0.755 µs/op` |
-| Wireup, same scope | `0.935 µs/op` |
-| dependency-injector | `1.721 µs/op` |
-| lagom | `10.010 µs/op` |
-| punq | `58.786 µs/op` |
+| manual wiring | `0.266 µs/op` |
+| **Injex** | **`0.333 µs/op`** |
+| dishka | `0.786 µs/op` |
+| Wireup, same scope | `0.872 µs/op` |
+| dependency-injector | `1.709 µs/op` |
+| lagom | `9.487 µs/op` |
+| punq | `56.982 µs/op` |
 
 This is synthetic and graph-specific — **not** a universal ranking. Reproduce it:
 

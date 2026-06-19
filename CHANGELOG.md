@@ -11,6 +11,14 @@ and this project uses semantic versioning.
 
 ### Changed
 
+- Faster repeated resolves via singleton constant-inlining. The compiled sync and
+  async creators now realize a scope-free singleton once at build time and inline
+  the instance as a constant, so the generated code constructs the transient spine
+  with no per-resolve getter calls. On the project benchmark sync `resolve()` drops
+  from `0.40` to `0.33 µs/op` (1.25× manual wiring), and singleton-heavy graphs
+  improve by ~60%. The resolve/`aresolve` dispatch was also tightened (single dict
+  lookup, interface-keyed async cache, cache-checked async singletons). Singleton
+  identity, laziness, and override/invalidation semantics are unchanged.
 - Compiled async resolution. `aresolve()` now compiles a flat `async` creator
   that inlines the synchronous parts of a graph and awaits only the genuinely
   async nodes, instead of walking the graph with a coroutine per node:

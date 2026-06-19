@@ -68,7 +68,17 @@ class Scope:
     def resolve(self, interface: str, name: Optional[str] = None) -> Any: ...
     def resolve(self, interface: Union[Type, str], name: Optional[str] = None) -> Any:
         """Resolve one service from this scope."""
-        return self.container._resolve_one(interface, self, name)
+        container = self.container
+        if name is None:
+            # A noscope creator only exists for graphs with no scoped services,
+            # so it is safe to use inside a scope too (nothing is per-scope).
+            try:
+                creator = container._noscope_creators[interface]
+            except KeyError:
+                creator = container._prime_noscope_creator(interface)
+            if creator is not None:
+                return creator(None)  # type: ignore[operator]
+        return container._resolve_one(interface, self, name)
 
     @overload
     def resolve_all(
@@ -113,12 +123,13 @@ class AsyncScope:
             # A compiled noscope creator only exists for a graph with no
             # factories at all (see _build_fast_creator), so it can contain no
             # async work — resolve it directly and skip the coroutine walk.
-            creator = container._noscope_creators.get(interface, _MISSING)
-            if creator is _MISSING:
+            try:
+                creator = container._noscope_creators[interface]
+            except KeyError:
                 creator = container._prime_noscope_creator(interface)
             if creator is not None:
                 return creator(None)  # type: ignore[operator]
-        acreator = container._get_async_creator((interface, name))
+        acreator = container._get_async_creator(interface, name)
         if acreator is not None:
             return await acreator[0](self)
         return await container._aresolve_one(interface, self, name, set())
@@ -164,7 +175,7 @@ class Container:
         # Value is None when the graph can't be flattened (falls back to the
         # interpreted async walk). Cleared on every invalidation.
         self._async_creators: Dict[
-            Tuple[Union[Type, str], Optional[str]],
+            Any,
             Optional[Tuple[Callable[[Any], Any], bool]],
         ] = {}
 
@@ -317,8 +328,9 @@ class Container:
         """Resolve one service. Raises AsyncResolutionRequiredException if the
         graph needs async work — use aresolve()/ascope() then."""
         if name is None:
-            creator = self._noscope_creators.get(interface, _MISSING)
-            if creator is _MISSING:
+            try:
+                creator = self._noscope_creators[interface]
+            except KeyError:
                 creator = self._prime_noscope_creator(interface)
             if creator is not None:
                 return creator(None)  # type: ignore[operator]
@@ -339,6 +351,11 @@ class Container:
                 and not registration.fast_creator_needs_scope
             ):
                 creator = registration.fast_creator
+                # A scope-free singleton root is immutable until invalidation
+                # (which rebuilds this entry). Realize it once and dispatch a
+                # plain constant, skipping the cached-getter's sentinel check.
+                if registration.lifestyle == LifeStyle.SINGLETON:
+                    creator = _make_constant_creator(creator(None))
         self._noscope_creators[interface] = creator
         return creator
 
@@ -681,6 +698,14 @@ class Container:
                 if built is None:
                     raise _NotFlat
                 leaf_creator, leaf_needs_scope = built
+                # A singleton whose subgraph needs no scope is immutable until the
+                # next invalidation (which rebuilds this creator). Realize it once
+                # here and inline the instance as a constant, so the generated code
+                # constructs the transient spine with zero getter calls.
+                if lifestyle == LifeStyle.SINGLETON and not leaf_needs_scope:
+                    sym = bind(leaf_creator(None), "s")  # type: ignore[arg-type]
+                    shared[node_key] = sym
+                    return sym
                 if lifestyle == LifeStyle.SCOPED or leaf_needs_scope:
                     needs_scope[0] = True
                 getter = bind(leaf_creator, "g")
@@ -728,16 +753,20 @@ class Container:
         return local["_flat"], needs_scope[0]
 
     def _get_async_creator(
-        self, key: Tuple[Union[Type, str], Optional[str]]
+        self, interface: Union[Type, str], name: Optional[str]
     ) -> Optional[Tuple[Callable[[Any], Any], bool]]:
-        cached = self._async_creators.get(key, _MISSING)
+        # Cache under the bare interface for the common name=None case so the
+        # hot path does a direct dict lookup with no per-call tuple allocation.
+        cache_key: Any = interface if name is None else (interface, name)
+        cached = self._async_creators.get(cache_key, _MISSING)
         if cached is not _MISSING:
             return cached  # type: ignore[return-value]
-        registrations = self._registrations.get(key)
+        reg_key = (interface, name)
+        registrations = self._registrations.get(reg_key)
         result: Optional[Tuple[Callable[[Any], Any], bool]] = None
         if registrations:
-            result = self._build_async_flat_creator(registrations[0], key)
-        self._async_creators[key] = result
+            result = self._build_async_flat_creator(registrations[0], reg_key)
+        self._async_creators[cache_key] = result
         return result
 
     def _build_async_flat_creator(
@@ -789,7 +818,23 @@ class Container:
                 return shared[node_key]
             counter[0] += 1
             var = f"v{counter[0]}"
-            prelude.append(f"{var} = await {sym}(scope)")
+            # Cached singleton/scoped: check the cache synchronously and only
+            # create+await the getter coroutine on a miss. After warmup this is a
+            # plain dict lookup with no coroutine churn.
+            ms = bind(_MISSING, "m")
+            if lifestyle == LifeStyle.SINGLETON:
+                ik = bind((node_key, reg), "ik")
+                sg = bind(self._singletons.get, "sg")
+                prelude.append(f"{var} = {sg}({ik}, {ms})")
+                prelude.append(f"if {var} is {ms}:")
+                prelude.append(f"    {var} = await {sym}(scope)")
+            elif lifestyle == LifeStyle.SCOPED:
+                ik = bind((node_key, reg), "ik")
+                prelude.append(f"{var} = scope._scoped_instances.get({ik}, {ms})")
+                prelude.append(f"if {var} is {ms}:")
+                prelude.append(f"    {var} = await {sym}(scope)")
+            else:
+                prelude.append(f"{var} = await {sym}(scope)")
             shared[node_key] = var
             return var
 
@@ -808,6 +853,14 @@ class Container:
             built = self._build_fast_creator(reg, node_key, set())
             if built is not None:
                 creator, leaf_needs_scope = built
+                # Realize a scope-free singleton once and inline it as a constant
+                # (same reasoning as the sync flat builder).
+                if reg.lifestyle == LifeStyle.SINGLETON and not leaf_needs_scope:
+                    if node_key in shared:
+                        return shared[node_key]
+                    sym = bind(creator(None), "s")  # type: ignore[arg-type]
+                    shared[node_key] = sym
+                    return sym
                 if leaf_needs_scope:
                     needs_scope[0] = True
                 gsym = bind(creator, "g")
@@ -1138,11 +1191,30 @@ class Container:
             # Fully-sync graph (no factories anywhere): reuse the compiled sync
             # creator and skip allocating an async scope + coroutine walk. This
             # is the common FastAPI case — await aresolve() on plain classes.
-            creator = self._noscope_creators.get(interface, _MISSING)
-            if creator is _MISSING:
+            try:
+                creator = self._noscope_creators[interface]
+            except KeyError:
                 creator = self._prime_noscope_creator(interface)
             if creator is not None:
                 return creator(None)  # type: ignore[operator]
+        acreator = self._get_async_creator(interface, name)
+        if acreator is not None:
+            creator_fn, creator_needs_scope = acreator
+            if not creator_needs_scope:
+                # Singletons only: no scope to allocate or finalize, and a
+                # top-level transient/scoped resource always needs a scope, so
+                # the resource footgun cannot apply here — skip the guard lookup.
+                return await creator_fn(None)
+            self._guard_top_async_resource(interface, name)
+            async with self.ascope() as scope:
+                return await creator_fn(scope)
+        self._guard_top_async_resource(interface, name)
+        async with self.ascope() as scope:
+            return await scope.aresolve(interface, name)
+
+    def _guard_top_async_resource(
+        self, interface: Union[Type, str], name: Optional[str]
+    ) -> None:
         registrations = self._registrations.get((interface, name))
         if registrations:
             registration = registrations[0]
@@ -1155,16 +1227,6 @@ class Container:
                     "aresolve() would finalize it immediately. Resolve it inside "
                     "'async with container.ascope() as scope: await scope.aresolve(...)'."
                 )
-        acreator = self._get_async_creator((interface, name))
-        if acreator is not None:
-            creator_fn, creator_needs_scope = acreator
-            if not creator_needs_scope:
-                # Singletons only: no scope to allocate or finalize.
-                return await creator_fn(None)
-            async with self.ascope() as scope:
-                return await creator_fn(scope)
-        async with self.ascope() as scope:
-            return await scope.aresolve(interface, name)
 
     async def aclose(self) -> None:
         """Finalize singleton async resources. Call once at application shutdown."""

@@ -136,14 +136,14 @@ Local benchmark result on Python 3.13.5 / macOS arm64:
 
 | Library | Median resolve time |
 | --- | ---: |
-| manual wiring | `0.264 µs/op` |
-| Injex | `0.407 µs/op` |
-| dishka | `0.755 µs/op` |
-| Wireup, same scope | `0.935 µs/op` |
-| Wireup, scope per operation | `1.559 µs/op` |
-| dependency-injector | `1.721 µs/op` |
-| lagom | `10.010 µs/op` |
-| punq | `58.786 µs/op` |
+| manual wiring | `0.266 µs/op` |
+| Injex | `0.333 µs/op` |
+| dishka | `0.786 µs/op` |
+| Wireup, same scope | `0.872 µs/op` |
+| Wireup, scope per operation | `1.544 µs/op` |
+| dependency-injector | `1.709 µs/op` |
+| lagom | `9.487 µs/op` |
+| punq | `56.982 µs/op` |
 
 These numbers are synthetic and graph-specific. They show low overhead for
 Injex's target shape. They are not a universal ranking.
