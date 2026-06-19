@@ -159,6 +159,19 @@ container.call(register_user, email="ada@example.com")  # use_case is injected
 function if it's a coroutine, and finalizes any async resources opened for the
 call when it returns.
 
+For CLI commands, [`injex.ext.cli`](./recipes.md) wraps this up: mark the service
+parameters with `Inject()` and decorate the command with `wire(container)`, and
+Typer/Click only see the real CLI arguments.
+
+```python
+from injex.ext.cli import Inject, wire
+
+@app.command()
+@wire(container)
+def greet(name: str, greeter: Greeter = Inject()):
+    print(greeter.greet(name))
+```
+
 ## Scopes
 
 A scope is a boundary that scoped services live inside of — typically one web

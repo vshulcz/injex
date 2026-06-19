@@ -11,6 +11,10 @@ and this project uses semantic versioning.
 
 ### Added
 
+- CLI injection (`injex.ext.cli`). Mark a command's service parameters with
+  `Inject()` and wrap it with `wire(container)`; the services are injected while
+  the CLI framework (Typer, Click, argparse, …) only sees the remaining
+  parameters. Pure-stdlib and framework-agnostic.
 - Auto-registration: mark classes with `@injectable` (optionally
   `lifestyle=`, `name=`, `provides=`) and register them in one call with
   `container.scan(module)` or `container.scan([Class, ...])`. Scanning a module

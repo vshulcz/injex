@@ -32,10 +32,11 @@ fastapi = ["fastapi>=0.100"]
 
 [tool.uv]
 # fastapi/httpx are intentionally NOT here: the type-check and FastAPI jobs add
-# them per-run with `uv run --with`, so the main test matrix (incl. Python 3.14,
-# where pydantic-core has no wheel yet) never builds pydantic. The integration
-# tests skip when FastAPI is absent.
+# them per-job (they pull pydantic-core, which has no wheel for Python 3.14 yet).
+# The FastAPI tests skip when FastAPI is absent. click is pure-Python and safe on
+# every supported version, so it stays a normal dev dependency.
 dev-dependencies = [
+    "click>=8.0",
     "mypy>=1.12.1",
     "pytest-cov>=6.0.0",
     "pytest>=8.3.3",
