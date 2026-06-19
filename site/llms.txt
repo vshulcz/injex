@@ -13,10 +13,18 @@ Key facts:
 - Package: `injex`
 - Runtime dependencies: none
 - License: MIT
-- Core API: `Container`, `Scope`, `inject`
+- Core API: `Container`, `Scope`, `inject`, `injectable`, `Named`
 - Lifetimes: singleton, transient, scoped
 - Features: typed constructor injection, factories, instances, named
-  registrations, optional dependencies, test overrides, graph validation
+  registrations (`Annotated[T, Named(...)]`), optional dependencies, property
+  injection, test overrides, graph validation
+- Resources: generator factories (sync and async) with teardown finalized on
+  scope exit or `close()` / `aclose()`
+- Async: `aresolve()`, `ascope()`, `acall()`, `aclose()`
+- Function injection: `container.call(fn, **overrides)` / `acall`
+- Auto-registration: `@injectable` + `container.scan(module)`
+- Integrations: `injex.ext.fastapi` (per-request scope + `Provide`),
+  `injex.ext.cli` (`Inject` + `wire` for Typer/Click)
 - Performance snapshot: `0.333 µs/op` median resolve time on the project small
   service-graph benchmark
 

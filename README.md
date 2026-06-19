@@ -87,6 +87,55 @@ with container.override(EmailSender, instance=fake_sender):
 See the [tutorial](./docs/tutorial.md) for factories, named registrations,
 `resolve_all()`, optional dependencies, and property injection.
 
+## Wire functions, not just classes
+
+`call()` invokes any function with its annotated parameters injected, while you
+pass the rest — a request, parsed args, a message. It's the building block for
+handlers and commands without turning them into classes:
+
+```python
+def register_user(email: str, use_case: RegisterUser) -> int:
+    return use_case.execute(email)
+
+container.call(register_user, email="ada@example.com")  # use_case is injected
+```
+
+**FastAPI** — `injex.ext.fastapi` opens a scope per request and injects into routes
+(`pip install injex[fastapi]`):
+
+```python
+from injex.ext.fastapi import Provide, setup_injex
+
+setup_injex(app, container)
+
+@app.post("/users")
+async def create(use_case: RegisterUser = Provide(RegisterUser)):
+    return use_case.execute(...)
+```
+
+**Typer / Click** — `injex.ext.cli` injects services; the CLI framework only sees
+the real arguments:
+
+```python
+from injex.ext.cli import Inject, wire
+
+@app.command()
+@wire(container)
+def register(email: str, use_case: RegisterUser = Inject()):
+    use_case.execute(email)
+```
+
+**Larger apps** — mark classes with `@injectable` and register them in one call:
+
+```python
+from injex import injectable
+
+@injectable(lifestyle="singleton")
+class ApiClient: ...
+
+container.scan(myapp.services)  # registers every @injectable defined there
+```
+
 ## When to use it
 
 - A service layer reused by an API, CLI, worker, and tests, where copy-pasted
@@ -200,15 +249,17 @@ For a deeper, fair comparison see [Injex vs other DI options](./docs/comparison.
 
 | Method | Use when |
 | --- | --- |
-| `add_singleton(T, Impl)` | One instance reused for the app lifetime. |
-| `add_transient(T, Impl)` | A new instance on every resolve. |
-| `add_scoped(T, Impl)` | One instance reused inside one scope. |
-| `add_*_factory(T, factory)` | Construction needs custom code. |
+| `add_singleton/transient/scoped(T, Impl)` | Register a class for the chosen lifetime. |
+| `add_*_factory(T, factory)` | Construction needs custom code; a generator factory becomes a resource with teardown. |
 | `add_instance(T, instance)` | You already have the object. |
+| `scan(module)` | Register every `@injectable` class in a module. |
 | `resolve(T)` / `resolve_all(T)` | Resolve one, or all unnamed implementations. |
-| `create_scope()` | Start a request, job, or message lifetime. |
+| `call(fn, **overrides)` | Invoke a function with its dependencies injected. |
+| `create_scope()` | Start a request/job lifetime (`with` finalizes scoped resources). |
 | `override(T, ...)` | Temporarily replace a dependency in tests. |
 | `validate()` / `assert_valid()` | Check wiring before startup. |
+| `aresolve(T)` / `ascope()` / `acall(fn)` / `aclose()` | Async equivalents (await factories, async resources). |
+| `close()` | Finalize singleton resources at shutdown. |
 
 ## Documentation
 
@@ -222,8 +273,10 @@ For a deeper, fair comparison see [Injex vs other DI options](./docs/comparison.
   [Performance](./docs/performance.md)
 - Examples:
   [clean architecture](./examples/clean_architecture.py),
-  [FastAPI lifespan](./examples/fastapi_lifespan.py),
-  [CLI](./examples/cli_app.py),
+  [FastAPI integration](./examples/fastapi_ext.py),
+  [CLI injection](./examples/cli_injection.py),
+  [config injection](./examples/config_injection.py),
+  [async FastAPI](./examples/fastapi_async.py),
   [testing](./examples/testing.py),
   [scopes](./examples/scoped.py)
 

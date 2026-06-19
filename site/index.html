@@ -253,6 +253,45 @@ container.assert_valid()
 service = container.resolve(Service)</code></pre>
       </section>
 
+      <section id="features" class="cards section" aria-label="Capabilities">
+        <article>
+          <span class="card-icon">★</span>
+          <h3>Validate before startup</h3>
+          <p>Check the whole graph — missing deps, missing annotations, cycles —
+            without constructing anything.</p>
+        </article>
+        <article>
+          <span class="card-icon">★</span>
+          <h3>Lifetimes &amp; resources</h3>
+          <p>Singleton, transient, scoped — plus generator factories with teardown,
+            finalized when a scope exits or on <code>close()</code>.</p>
+        </article>
+        <article>
+          <span class="card-icon">★</span>
+          <h3>Async, first-class</h3>
+          <p><code>aresolve()</code> / <code>ascope()</code> await async factories
+            and async-resource lifecycles, on par with sync speed.</p>
+        </article>
+        <article>
+          <span class="card-icon">★</span>
+          <h3>Inject into functions</h3>
+          <p><code>call()</code> wires any handler or command; pass the request or
+            args, the services are injected.</p>
+        </article>
+        <article>
+          <span class="card-icon">★</span>
+          <h3>FastAPI &amp; CLI</h3>
+          <p><code>injex.ext.fastapi</code> injects into routes with a per-request
+            scope; <code>injex.ext.cli</code> wires Typer/Click commands.</p>
+        </article>
+        <article>
+          <span class="card-icon">★</span>
+          <h3>Auto-registration</h3>
+          <p>Mark classes with <code>@injectable</code> and register a whole module
+            with <code>container.scan()</code> — still explicit.</p>
+        </article>
+      </section>
+
       <section class="section comparison">
         <p class="eyebrow">Positioning</p>
         <h2>Small by design, useful by contract.</h2>

@@ -3,6 +3,23 @@
 Start here when you want to wire a small Python application without pulling in a
 framework-sized dependency injection container.
 
+## What Injex does
+
+- **Constructor injection** from plain type hints, with singleton / transient /
+  scoped lifetimes, factories, named registrations, optional dependencies, and
+  property injection — see the [tutorial](./tutorial.md).
+- **Validation** of the whole graph before anything is constructed
+  ([validation](./validation.md)).
+- **Resources with teardown**, sync and async, finalized when their scope exits or
+  on `close()` / `aclose()` ([async](./async.md)).
+- **Function injection** — `call()` / `acall()` inject into any function
+  ([tutorial](./tutorial.md#calling-functions)).
+- **Auto-registration** — `@injectable` + `scan()`
+  ([tutorial](./tutorial.md#auto-registration)).
+- **Integrations** — [FastAPI](./fastapi-depends.md#optional-integration)
+  (`injex.ext.fastapi`) and Typer/Click (`injex.ext.cli`).
+- **Zero runtime dependencies**, typed (PEP 561), Python 3.10–3.14.
+
 ## Guides
 
 - [Tutorial](./tutorial.md): registrations, lifetimes, factories, overrides, and
