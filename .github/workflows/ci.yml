@@ -160,7 +160,10 @@ jobs:
       - name: Check relative links
         uses: lycheeverse/lychee-action@v2
         with:
-          args: "--offline --no-progress README.md CHANGELOG.md CONTRIBUTING.md ROADMAP.md docs site"
+          # --offline checks local files only (no flaky network). The /injex/...
+          # links are root-relative for the deployed GitHub Pages site and only
+          # resolve there, so exclude that prefix.
+          args: '--offline --no-progress --exclude "^/injex/" README.md CHANGELOG.md CONTRIBUTING.md ROADMAP.md docs site'
           fail: true
 
   coverage:
