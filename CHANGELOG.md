@@ -18,6 +18,13 @@ and this project uses semantic versioning.
 - `Scope` is a context manager: `with container.create_scope() as scope: ...`
   drops the scope's per-scope instances on exit.
 
+### Changed
+
+- Clearer resolution errors. A missing dependency now reads
+  `Service for interface 'DB' is not registered. It is required by Repo.db.`
+  instead of printing the raw class repr with no context. `validate()` no longer
+  repeats the same error once per root that shares a dependency.
+
 ## [1.5.1] - 2026-06-19
 
 ### Fixed
