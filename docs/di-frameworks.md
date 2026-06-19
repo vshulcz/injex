@@ -6,20 +6,17 @@ decision, see the [comparison guide](./comparison.md).
 
 ## Where Injex loses
 
-Pick a larger framework when you need any of these — Injex deliberately doesn't do
-them:
+Pick a larger framework when you need this — Injex deliberately doesn't do it:
 
-- **Framework-native scopes for async resources.** Injex does open and close async
-  resources (connection pools, `async def ... yield`) via `ascope()` / `aclose()`
-  (see [async resolution](./async.md)). What the larger frameworks add on top is
-  deeper integration with framework-managed request/session scopes — Dishka in
-  particular wires its scopes directly into FastAPI/Litestar. With Injex you open
-  the scope yourself at the request boundary.
-- **A configuration/provider DSL.** If wiring config values through provider objects
-  is part of your architecture, `dependency-injector` is purpose-built for it.
-- **Deep framework auto-wiring.** Dishka/Wireup can plug directly into FastAPI or
-  task-framework scopes and inject into handler signatures. Injex stays at the
-  composition root and lets the framework adapt the graph at its edge.
+- **A configuration/provider DSL.** Loading config from env/files, coercing types,
+  and wiring values through provider objects is `dependency-injector`'s domain. In
+  Injex configuration is a normal dependency: register a settings object, or values
+  as named registrations and inject them with `Annotated[T, Named(...)]`.
+
+Things people often assume Injex *can't* do, but it can: it manages async (and
+sync) resource lifecycles via `ascope()` / `create_scope()`, injects into FastAPI
+routes through [`injex.ext.fastapi`](./fastapi-depends.md), and injects into any
+function (Typer/Click commands, workers) through `container.call()`.
 
 ## Dependency Injector
 
