@@ -135,6 +135,19 @@ container.add_singleton(Database, ReplicaDatabase, name="replica")
 replica = container.resolve(Database, name="replica")
 ```
 
+To inject a specific one into a constructor, mark the parameter with
+`Annotated[T, Named(...)]`:
+
+```python
+from typing import Annotated
+from injex import Named
+
+
+class ReportJob:
+    def __init__(self, db: Annotated[Database, Named("replica")]):
+        self.db = db  # gets ReplicaDatabase
+```
+
 ## Optional dependencies
 
 A parameter typed `Optional[...]` (or with a default) resolves to `None` (or the

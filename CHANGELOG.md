@@ -7,6 +7,17 @@ and this project uses semantic versioning.
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-06-19
+
+### Added
+
+- Inject a named registration into a constructor with
+  `Annotated[T, Named("primary")]`. Previously a named registration could only be
+  reached through `resolve(T, name="primary")`; now it can be a constructor
+  dependency, and `validate()` checks it like any other.
+- `Scope` is a context manager: `with container.create_scope() as scope: ...`
+  drops the scope's per-scope instances on exit.
+
 ## [1.5.1] - 2026-06-19
 
 ### Fixed

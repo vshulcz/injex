@@ -1,16 +1,12 @@
 import asyncio
 import inspect
 import threading
-import types
 from collections.abc import Callable
 from contextlib import AsyncExitStack, asynccontextmanager
 from typing import (
     Any,
     TypeVar,
-    Union,
     cast,
-    get_args,
-    get_origin,
     overload,
 )
 
@@ -37,6 +33,7 @@ from .planning import (
     _make_constant_creator,
     _make_fast_raw_creator,
     _none_creator,
+    _normalize_dependency_type,
     _ServicePlan,
 )
 from .registry import LifeStyle, OverrideContext, Registration, RegistrationType
@@ -56,6 +53,13 @@ class Scope:
     def __init__(self, container: "Container"):
         self.container = container
         self._scoped_instances: dict[Any, Any] = {}
+
+    def __enter__(self) -> "Scope":
+        return self
+
+    def __exit__(self, exc_type: Any, exc: Any, traceback: Any) -> None:
+        # Drop per-scope instances so they aren't held past the block.
+        self._scoped_instances.clear()
 
     @overload
     def resolve(self, interface: type[T], name: str | None = None) -> T: ...
@@ -561,16 +565,12 @@ class Container:
         dependency_name: str,
         has_default: bool = False,
     ) -> list[ValidationError]:
-        is_optional = False
-        origin = get_origin(dependency_type)
-        if origin in (Union, types.UnionType):
-            args = get_args(dependency_type)
-            if type(None) in args:
-                is_optional = True
-                non_none_args = [arg for arg in args if arg is not type(None)]
-                dependency_type = non_none_args[0] if non_none_args else Any
+        dependency_type, is_optional, dep_name = _normalize_dependency_type(
+            dependency_type
+        )
 
-        dependency_key = self._get_validation_key(dependency_type)
+        base_key = self._get_validation_key(dependency_type)
+        dependency_key = (base_key[0], dep_name)
         registrations = self._registrations.get(dependency_key, [])
         if not registrations:
             if is_optional or has_default:
