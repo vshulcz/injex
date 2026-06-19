@@ -78,6 +78,28 @@ There is a factory variant for each lifetime: `add_singleton_factory`,
 `add_transient_factory`, `add_scoped_factory`. Async (`async def`) factories and
 async-generator resources go through the async API — see [Async](./async.md).
 
+### Resources with teardown
+
+A **generator** factory is a resource: it yields the value and runs the code
+after the `yield` as teardown. Scoped/transient resources are finalized when their
+scope exits; singleton resources when `container.close()` is called (the container
+is also a context manager).
+
+```python
+def db_session(settings: Settings):
+    session = connect(settings.database_url)
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+container.add_scoped_factory(Session, db_session)
+
+with container.create_scope() as scope:
+    session = scope.resolve(Session)  # closed when the block exits
+```
+
 ## Existing instances
 
 If you already hold an object, register it directly. It is treated as a

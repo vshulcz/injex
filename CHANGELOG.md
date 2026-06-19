@@ -11,6 +11,10 @@ and this project uses semantic versioning.
 
 ### Added
 
+- Sync resources with teardown. A generator factory (`def f(...): ...; yield x;
+  cleanup()`) is finalized when its scope exits (scoped/transient) or on
+  `container.close()` (singleton); the container is now a context manager too.
+  This mirrors the existing async-generator resources for synchronous code.
 - `container.call(func, **overrides)` (and async `acall`) invoke a function with
   its annotated parameters injected from the container, while `overrides` supplies
   per-call values (a request, parsed args, a message). `acall` awaits async

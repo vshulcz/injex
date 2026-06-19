@@ -60,6 +60,11 @@ be owned by one request/task — create one per request rather than sharing a
 single scope across threads. The container itself is thread-safe to resolve from;
 singletons are built once even under concurrent first resolves.
 
+A generator factory is a resource: scoped/transient resources are finalized when
+their scope exits (`with container.create_scope() as scope:`); singleton resources
+when `container.close()` is called (the container is also a context manager).
+Async resources work the same way through `ascope()` / `await container.aclose()`.
+
 ## Async
 
 Async factories (`async def`) and async-generator resources are registered with

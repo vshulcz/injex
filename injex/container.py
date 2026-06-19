@@ -2,7 +2,7 @@ import asyncio
 import inspect
 import threading
 from collections.abc import Callable
-from contextlib import AsyncExitStack, asynccontextmanager
+from contextlib import AsyncExitStack, ExitStack, asynccontextmanager, contextmanager
 from typing import (
     Any,
     TypeVar,
@@ -48,17 +48,20 @@ class _NotFlat(Exception):
 
 
 class Scope:
-    __slots__ = ("container", "_scoped_instances")
+    __slots__ = ("container", "_scoped_instances", "_stack")
 
     def __init__(self, container: "Container"):
         self.container = container
         self._scoped_instances: dict[Any, Any] = {}
+        # Holds sync resources opened in this scope; finalized (LIFO) on exit.
+        self._stack = ExitStack()
 
     def __enter__(self) -> "Scope":
         return self
 
     def __exit__(self, exc_type: Any, exc: Any, traceback: Any) -> None:
-        # Drop per-scope instances so they aren't held past the block.
+        # Finalize sync resources (LIFO), then drop per-scope instances.
+        self._stack.close()
         self._scoped_instances.clear()
 
     @overload
@@ -140,6 +143,8 @@ class Container:
         "_async_creators",
         "_singleton_lock",
         "_async_inflight",
+        "_sync_stack",
+        "_sync_resource_keys",
     )
 
     def __init__(self) -> None:
@@ -181,6 +186,17 @@ class Container:
         # concurrent coroutines awaiting the same uncached singleton share one
         # build instead of each constructing their own.
         self._async_inflight: dict[Any, asyncio.Future[Any]] = {}
+        # Lazily created ExitStack holding singleton sync resources; finalized by
+        # container.close() at shutdown, with their instance_keys tracked so close()
+        # can evict them (mirrors the async stack / aclose()).
+        self._sync_stack: ExitStack | None = None
+        self._sync_resource_keys: set[Any] = set()
+
+    def __enter__(self) -> "Container":
+        return self
+
+    def __exit__(self, exc_type: Any, exc: Any, traceback: Any) -> None:
+        self.close()
 
     @property
     def _resolving(self) -> set[Any]:
@@ -244,6 +260,7 @@ class Container:
             kind=RegistrationType.FACTORY, factory=factory, lifestyle=lifestyle
         )
         registration.is_resource = inspect.isasyncgenfunction(factory)
+        registration.is_sync_resource = inspect.isgeneratorfunction(factory)
         registration.is_async = inspect.iscoroutinefunction(factory)
         self._registrations.setdefault(key, []).append(registration)
         self._invalidate_fast_creators()
@@ -303,6 +320,7 @@ class Container:
                 lifestyle=lifestyle,
             )
             registration.is_resource = inspect.isasyncgenfunction(factory)
+            registration.is_sync_resource = inspect.isgeneratorfunction(factory)
             registration.is_async = inspect.iscoroutinefunction(factory)
         else:
             if implementation is None:
@@ -338,9 +356,25 @@ class Container:
                 creator = self._prime_noscope_creator(interface)
             if creator is not None:
                 return creator(None)
+            self._guard_top_sync_resource(interface, None)
             scope = Scope(self)
             return self._resolve_one(interface, scope, None)
         return self._resolve_slow(interface, name)
+
+    def _guard_top_sync_resource(self, interface: type | str, name: str | None) -> None:
+        registrations = self._registrations.get((interface, name))
+        if registrations:
+            registration = registrations[0]
+            if registration.is_sync_resource and registration.lifestyle in (
+                LifeStyle.TRANSIENT,
+                LifeStyle.SCOPED,
+            ):
+                raise ValueError(
+                    f"{_describe_service(interface)} is a {registration.lifestyle} "
+                    "resource; resolve() would finalize it immediately. Resolve it "
+                    "inside 'with container.create_scope() as scope: "
+                    "scope.resolve(...)'."
+                )
 
     def _prime_noscope_creator(
         self, interface: type | str
@@ -373,6 +407,7 @@ class Container:
             fast_creator = registration.fast_creator
             if fast_creator is not None and not registration.fast_creator_needs_scope:
                 return fast_creator(None)
+        self._guard_top_sync_resource(interface, name)
         scope = self.create_scope()
         return self._resolve_one(interface, scope, name)
 
@@ -1067,6 +1102,8 @@ class Container:
                 return existing
             instance = self._create_instance_from_registration(registration, scope)
             self._singletons[instance_key] = instance
+            if registration.is_sync_resource:
+                self._sync_resource_keys.add(instance_key)
             return instance
 
     def _get_instance_from_registration(
@@ -1220,7 +1257,30 @@ class Container:
             self._resolve_dependency_plan(dependency_plan, scope, factory)
             for dependency_plan in plan.dependencies
         ]
+        if registration.is_sync_resource:
+            # Generator factory used as a resource: enter its context on the
+            # singleton's container stack (closed by close()) or the scope's stack
+            # (closed when the scope exits), so teardown runs after the yield.
+            cm = contextmanager(factory)(*args)
+            if registration.lifestyle == LifeStyle.SINGLETON:
+                return self._get_sync_stack().enter_context(cm)
+            return scope._stack.enter_context(cm)
         return factory(*args)
+
+    def _get_sync_stack(self) -> ExitStack:
+        if self._sync_stack is None:
+            self._sync_stack = ExitStack()
+        return self._sync_stack
+
+    def close(self) -> None:
+        """Finalize singleton sync resources. Call once at application shutdown
+        (or use the container as a context manager)."""
+        if self._sync_stack is not None:
+            stack, self._sync_stack = self._sync_stack, None
+            for instance_key in self._sync_resource_keys:
+                self._singletons.pop(instance_key, None)
+            self._sync_resource_keys.clear()
+            stack.close()
 
     # ------------------------------------------------------------------ async
 

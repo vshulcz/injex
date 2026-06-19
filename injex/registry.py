@@ -31,6 +31,7 @@ class Registration:
         "fast_creator_needs_scope",
         "is_async",
         "is_resource",
+        "is_sync_resource",
     )
 
     def __init__(
@@ -55,6 +56,10 @@ class Registration:
         # Both are resolved only through the async path; sync resolve rejects them.
         self.is_async = False
         self.is_resource = False
+        # A sync generator factory (`def f(...): ...; yield x; cleanup()`) used as
+        # a resource: finalized when its scope exits, or on container.close() for
+        # singletons. Resolved on the normal sync path.
+        self.is_sync_resource = False
 
 
 class OverrideContext:
