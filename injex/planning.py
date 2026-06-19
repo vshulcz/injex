@@ -1,15 +1,10 @@
 import inspect
 import types
+from collections.abc import Callable
 from dataclasses import dataclass
-from functools import lru_cache
+from functools import cache
 from typing import (
     Any,
-    Callable,
-    Dict,
-    List,
-    Optional,
-    Tuple,
-    Type,
     Union,
     cast,
     get_args,
@@ -18,49 +13,49 @@ from typing import (
 )
 
 
-def inject(func: Callable) -> Callable:
+def inject(func: Callable[..., Any]) -> Callable[..., Any]:
     func.__annotations__["_inject"] = True
     return func
 
 
-def is_injectable(func: Callable) -> bool:
+def is_injectable(func: Callable[..., Any]) -> bool:
     return hasattr(func, "__annotations__") and func.__annotations__.get(
         "_inject", False
     )
 
 
-@lru_cache(maxsize=None)
+@cache
 def _cached_parameters(
     func: Callable[..., Any],
-) -> Tuple[Tuple[str, inspect.Parameter], ...]:
+) -> tuple[tuple[str, inspect.Parameter], ...]:
     return tuple(inspect.signature(func).parameters.items())
 
 
-@lru_cache(maxsize=None)
-def _cached_type_hints(func: Callable[..., Any]) -> Dict[str, Any]:
+@cache
+def _cached_type_hints(func: Callable[..., Any]) -> dict[str, Any]:
     return get_type_hints(func)
 
 
 def _get_parameters(
     func: Callable[..., Any],
-) -> Tuple[Tuple[str, inspect.Parameter], ...]:
+) -> tuple[tuple[str, inspect.Parameter], ...]:
     try:
         return _cached_parameters(func)
     except TypeError:
         return tuple(inspect.signature(func).parameters.items())
 
 
-def _get_type_hints(func: Callable[..., Any]) -> Dict[str, Any]:
+def _get_type_hints(func: Callable[..., Any]) -> dict[str, Any]:
     try:
         return _cached_type_hints(func)
     except TypeError:
         return get_type_hints(func)
 
 
-@lru_cache(maxsize=None)
+@cache
 def _cached_injected_properties(
-    cls: Type,
-) -> Tuple[Tuple[str, Callable[..., Any]], ...]:
+    cls: type,
+) -> tuple[tuple[str, Callable[..., Any]], ...]:
     properties = []
     for name in dir(cls):
         attr = getattr(cls, name)
@@ -73,7 +68,7 @@ def _cached_injected_properties(
 class _DependencyPlan:
     name: str
     dependency_type: Any
-    dependency_key: Optional[Tuple[Union[Type, str], Optional[str]]]
+    dependency_key: tuple[type | str, str | None] | None
     has_default: bool
     default: Any
     is_optional: bool
@@ -82,21 +77,21 @@ class _DependencyPlan:
 
 @dataclass(frozen=True)
 class _CallablePlan:
-    dependencies: Tuple[_DependencyPlan, ...]
+    dependencies: tuple[_DependencyPlan, ...]
 
 
 @dataclass(frozen=True)
 class _ServicePlan:
-    dependencies: Tuple[_DependencyPlan, ...]
-    property_dependencies: Tuple[_DependencyPlan, ...]
+    dependencies: tuple[_DependencyPlan, ...]
+    property_dependencies: tuple[_DependencyPlan, ...]
 
 
 @dataclass(frozen=True)
 class _FactoryPlan:
-    dependencies: Tuple[_DependencyPlan, ...]
+    dependencies: tuple[_DependencyPlan, ...]
 
 
-def _normalize_dependency_type(dependency_type: Any) -> Tuple[Any, bool]:
+def _normalize_dependency_type(dependency_type: Any) -> tuple[Any, bool]:
     origin = get_origin(dependency_type)
     if origin in (Union, types.UnionType):
         args = get_args(dependency_type)
@@ -106,7 +101,7 @@ def _normalize_dependency_type(dependency_type: Any) -> Tuple[Any, bool]:
     return dependency_type, False
 
 
-@lru_cache(maxsize=None)
+@cache
 def _cached_callable_plan(
     func: Callable[..., Any], skip_self: bool = False
 ) -> _CallablePlan:
@@ -201,8 +196,8 @@ def _get_callable_plan(
         return _CallablePlan(tuple(dependencies))
 
 
-@lru_cache(maxsize=None)
-def _cached_property_dependencies(cls: Type) -> Tuple[_DependencyPlan, ...]:
+@cache
+def _cached_property_dependencies(cls: type) -> tuple[_DependencyPlan, ...]:
     dependencies = []
     for name, attr in _cached_injected_properties(cast(Any, cls)):
         type_hints = _cached_type_hints(attr)
@@ -223,7 +218,7 @@ def _cached_property_dependencies(cls: Type) -> Tuple[_DependencyPlan, ...]:
 
 
 def _make_fast_raw_creator(
-    cls: Type, dependency_creators: List[Callable[[Any], Any]]
+    cls: type, dependency_creators: list[Callable[[Any], Any]]
 ) -> Callable[[Any], Any]:
     dependency_count = len(dependency_creators)
     if dependency_count == 0:

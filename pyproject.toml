@@ -1,13 +1,18 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "injex"
 version = "1.5.0"
 authors = [{name = "vshulcz", email = "vshulcz@gmail.com"}]
-description = "Tiny typed dependency injection for Python apps"
+description = "Tiny typed dependency injection container for Python"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -15,6 +20,8 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
     "Operating System :: OS Independent",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
     "Typing :: Typed",
 ]
 keywords = ["dependency-injection", "di", "container", "ioc", "clean-architecture", "testing"]
@@ -41,3 +48,38 @@ injex = ["py.typed"]
 
 [tool.setuptools.packages.find]
 include = ["injex*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+# FastAPI's Depends() in argument defaults is the documented idiom.
+"examples/*" = ["B008"]
+# Abstract-base test fixtures intentionally have no abstract methods.
+"tests/*" = ["B024"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+
+# Tests favour readability over full annotations; keep them type-checked but
+# don't require every fixture/helper to be annotated.
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_calls = false
+disallow_untyped_decorators = false
+check_untyped_defs = false
+warn_unused_ignores = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=injex --cov-report=term-missing"
+
+[tool.coverage.run]
+source = ["injex"]
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true

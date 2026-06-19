@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import List, Optional, Type, Union
 
 
 class DIException(Exception):
@@ -14,21 +13,23 @@ class ServiceNotRegisteredException(DIException):
 
 
 class CyclicDependencyException(DIException):
-    def __init__(self, cls: Type):
+    def __init__(self, cls: type):
         super().__init__(f"Cyclic dependency detected: {cls}.")
 
 
 class MissingTypeAnnotationException(DIException):
-    def __init__(self, param_name: str, cls: Type):
+    def __init__(self, param_name: str, cls: type):
         super().__init__(
-            f"Missing type annotation for parameter '{param_name}' in class '{cls.__name__}'."
+            f"Missing type annotation for parameter '{param_name}' "
+            f"in class '{cls.__name__}'."
         )
 
 
 class InvalidLifestyleException(DIException):
     def __init__(self, lifestyle: str):
         super().__init__(
-            f"Invalid lifestyle '{lifestyle}'. Valid options are 'transient', 'singleton', or 'scoped'."
+            f"Invalid lifestyle '{lifestyle}'. "
+            "Valid options are 'transient', 'singleton', or 'scoped'."
         )
 
 
@@ -43,7 +44,7 @@ class AsyncResolutionRequiredException(DIException):
 
 
 class PropertyInjectionException(DIException):
-    def __init__(self, cls: Type, name: str):
+    def __init__(self, cls: type, name: str):
         super().__init__(
             f"Cannot inject property '{name}' on '{getattr(cls, '__name__', cls)}': "
             "the type uses __slots__ or is a frozen dataclass, so attributes "
@@ -54,8 +55,8 @@ class PropertyInjectionException(DIException):
 
 @dataclass(frozen=True)
 class ValidationError:
-    service: Union[Type, str]
-    name: Optional[str]
+    service: type | str
+    name: str | None
     message: str
 
     def __str__(self) -> str:
@@ -66,7 +67,7 @@ class ValidationError:
 
 
 class ContainerValidationException(DIException):
-    def __init__(self, errors: List[ValidationError]):
+    def __init__(self, errors: list[ValidationError]):
         self.errors = errors
         details = "\n".join(f"- {error}" for error in errors)
         super().__init__(
@@ -74,7 +75,7 @@ class ContainerValidationException(DIException):
         )
 
 
-def _describe_service(service: Union[Type, str]) -> str:
+def _describe_service(service: type | str) -> str:
     if isinstance(service, str):
         return service
     return getattr(service, "__name__", str(service))

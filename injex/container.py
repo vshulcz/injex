@@ -1,16 +1,10 @@
 import inspect
 import threading
 import types
+from collections.abc import Callable
 from contextlib import AsyncExitStack, asynccontextmanager
 from typing import (
     Any,
-    Callable,
-    Dict,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Type,
     TypeVar,
     Union,
     cast,
@@ -31,18 +25,18 @@ from .errors import (
     _describe_service,
 )
 from .planning import (
-    _DependencyPlan,
-    _FactoryPlan,
-    _ServicePlan,
     _cached_injected_properties,
     _cached_property_dependencies,
     _cached_type_hints,
+    _DependencyPlan,
+    _FactoryPlan,
     _get_callable_plan,
     _get_parameters,
     _get_type_hints,
     _make_constant_creator,
     _make_fast_raw_creator,
     _none_creator,
+    _ServicePlan,
 )
 from .registry import LifeStyle, OverrideContext, Registration, RegistrationType
 
@@ -60,13 +54,13 @@ class Scope:
 
     def __init__(self, container: "Container"):
         self.container = container
-        self._scoped_instances: Dict[Any, Any] = {}
+        self._scoped_instances: dict[Any, Any] = {}
 
     @overload
-    def resolve(self, interface: type[T], name: Optional[str] = None) -> T: ...
+    def resolve(self, interface: type[T], name: str | None = None) -> T: ...
     @overload
-    def resolve(self, interface: str, name: Optional[str] = None) -> Any: ...
-    def resolve(self, interface: Union[Type, str], name: Optional[str] = None) -> Any:
+    def resolve(self, interface: str, name: str | None = None) -> Any: ...
+    def resolve(self, interface: type | str, name: str | None = None) -> Any:
         """Resolve one service from this scope."""
         container = self.container
         if name is None:
@@ -77,18 +71,14 @@ class Scope:
             except KeyError:
                 creator = container._prime_noscope_creator(interface)
             if creator is not None:
-                return creator(None)  # type: ignore[operator]
+                return creator(None)
         return container._resolve_one(interface, self, name)
 
     @overload
-    def resolve_all(
-        self, interface: type[T], name: Optional[str] = None
-    ) -> List[T]: ...
+    def resolve_all(self, interface: type[T], name: str | None = None) -> list[T]: ...
     @overload
-    def resolve_all(self, interface: str, name: Optional[str] = None) -> List[Any]: ...
-    def resolve_all(
-        self, interface: Union[Type, str], name: Optional[str] = None
-    ) -> List[Any]:
+    def resolve_all(self, interface: str, name: str | None = None) -> list[Any]: ...
+    def resolve_all(self, interface: type | str, name: str | None = None) -> list[Any]:
         """Resolve all unnamed implementations registered for a type."""
         return self.container._resolve_in_scope(interface, self, name)
 
@@ -101,7 +91,7 @@ class AsyncScope:
 
     def __init__(self, container: "Container"):
         self.container = container
-        self._scoped_instances: Dict[Any, Any] = {}
+        self._scoped_instances: dict[Any, Any] = {}
         self._stack = AsyncExitStack()
 
     async def __aenter__(self) -> "AsyncScope":
@@ -111,12 +101,10 @@ class AsyncScope:
         await self._stack.aclose()
 
     @overload
-    async def aresolve(self, interface: type[T], name: Optional[str] = None) -> T: ...
+    async def aresolve(self, interface: type[T], name: str | None = None) -> T: ...
     @overload
-    async def aresolve(self, interface: str, name: Optional[str] = None) -> Any: ...
-    async def aresolve(
-        self, interface: Union[Type, str], name: Optional[str] = None
-    ) -> Any:
+    async def aresolve(self, interface: str, name: str | None = None) -> Any: ...
+    async def aresolve(self, interface: type | str, name: str | None = None) -> Any:
         """Resolve one service from this async scope (awaits async factories)."""
         container = self.container
         if name is None:
@@ -128,7 +116,7 @@ class AsyncScope:
             except KeyError:
                 creator = container._prime_noscope_creator(interface)
             if creator is not None:
-                return creator(None)  # type: ignore[operator]
+                return creator(None)
         acreator = container._get_async_creator(interface, name)
         if acreator is not None:
             return await acreator[0](self)
@@ -147,11 +135,11 @@ class Container:
         "_async_creators",
     )
 
-    def __init__(self):
-        self._registrations: Dict[
-            Tuple[Union[Type, str], Optional[str]], List[Registration]
+    def __init__(self) -> None:
+        self._registrations: dict[
+            tuple[type | str, str | None], list[Registration]
         ] = {}
-        self._singletons: Dict[Any, Any] = {}
+        self._singletons: dict[Any, Any] = {}
         # Per-thread in-progress set for cycle detection on the interpreted sync
         # path. Thread-local so concurrent resolves (e.g. a threaded web server)
         # never see each other's in-progress types. The async path uses its own
@@ -160,27 +148,27 @@ class Container:
         self._version = 0
         # Lazily created AsyncExitStack holding singleton async resources;
         # finalized by `await container.aclose()` at shutdown.
-        self._async_stack: Optional[AsyncExitStack] = None
+        self._async_stack: AsyncExitStack | None = None
         # instance_keys of singleton async resources entered on _async_stack, so
         # aclose() can evict them and avoid handing back a finalized object.
-        self._async_resource_keys: Set[Any] = set()
+        self._async_resource_keys: set[Any] = set()
         # Direct interface -> creator dispatch for the common name=None,
         # no-scope-needed case. Skips the per-resolve key-tuple allocation and
         # registration attribute reads. Value is None when the interface is not
         # eligible for the no-scope fast path. Cleared on every invalidation.
-        self._noscope_creators: Dict[Any, Optional[Callable[[Any], Any]]] = {}
+        self._noscope_creators: dict[Any, Callable[[Any], Any] | None] = {}
         # Compiled async creators per (interface, name): an `async def` that
         # inlines the synchronous parts of the graph and awaits only genuine
         # async nodes, plus a flag for whether it needs an async scope.
         # Value is None when the graph can't be flattened (falls back to the
         # interpreted async walk). Cleared on every invalidation.
-        self._async_creators: Dict[
+        self._async_creators: dict[
             Any,
-            Optional[Tuple[Callable[[Any], Any], bool]],
+            tuple[Callable[[Any], Any], bool] | None,
         ] = {}
 
     @property
-    def _resolving(self) -> Set[Any]:
+    def _resolving(self) -> set[Any]:
         s = getattr(self._resolving_local, "value", None)
         if s is None:
             s = set()
@@ -194,10 +182,10 @@ class Container:
 
     def register(
         self,
-        interface: Type,
-        implementation: Optional[Type] = None,
+        interface: type,
+        implementation: type | None = None,
         lifestyle: str = LifeStyle.TRANSIENT,
-        name: Optional[str] = None,
+        name: str | None = None,
     ) -> None:
         """Register a class. ``implementation`` defaults to ``interface``.
         Dependencies are read from the constructor's type hints."""
@@ -220,10 +208,10 @@ class Container:
 
     def register_factory(
         self,
-        interface: Type,
+        interface: type,
         factory: Callable[..., Any],
         lifestyle: str = LifeStyle.TRANSIENT,
-        name: Optional[str] = None,
+        name: str | None = None,
     ) -> None:
         """Register a callable that builds the service. The factory's own
         parameters are injected. Coroutine factories and async generators
@@ -246,7 +234,7 @@ class Container:
         self._invalidate_fast_creators()
 
     def add_instance(
-        self, interface: Type, instance: Any, name: Optional[str] = None
+        self, interface: type, instance: Any, name: str | None = None
     ) -> None:
         """Register an already-built object. Resolves return it as-is."""
         key = (interface, name)
@@ -260,13 +248,13 @@ class Container:
 
     def override(
         self,
-        interface: Type,
-        implementation: Optional[Type] = None,
+        interface: type,
+        implementation: type | None = None,
         *,
-        factory: Optional[Callable[..., Any]] = None,
-        instance: Optional[Any] = None,
+        factory: Callable[..., Any] | None = None,
+        instance: Any | None = None,
         lifestyle: str = LifeStyle.TRANSIENT,
-        name: Optional[str] = None,
+        name: str | None = None,
     ) -> OverrideContext:
         """Temporarily replace a registration; returns a context manager that
         restores the previous one on exit. Handy for tests."""
@@ -275,7 +263,8 @@ class Container:
         )
         if provided > 1:
             raise ValueError(
-                "Provide only one override target: implementation, factory, or instance."
+                "Provide only one override target: "
+                "implementation, factory, or instance."
             )
         if lifestyle not in (
             LifeStyle.TRANSIENT,
@@ -312,8 +301,8 @@ class Container:
         return OverrideContext(self, (interface, name), registration)
 
     def _pop_singletons_for_key(
-        self, key: Tuple[Union[Type, str], Optional[str]]
-    ) -> Dict[Any, Any]:
+        self, key: tuple[type | str, str | None]
+    ) -> dict[Any, Any]:
         removed = {}
         for instance_key in list(self._singletons):
             if instance_key[0] == key:
@@ -321,10 +310,10 @@ class Container:
         return removed
 
     @overload
-    def resolve(self, interface: type[T], name: Optional[str] = None) -> T: ...
+    def resolve(self, interface: type[T], name: str | None = None) -> T: ...
     @overload
-    def resolve(self, interface: str, name: Optional[str] = None) -> Any: ...
-    def resolve(self, interface: Union[Type, str], name: Optional[str] = None) -> Any:
+    def resolve(self, interface: str, name: str | None = None) -> Any: ...
+    def resolve(self, interface: type | str, name: str | None = None) -> Any:
         """Resolve one service. Raises AsyncResolutionRequiredException if the
         graph needs async work — use aresolve()/ascope() then."""
         if name is None:
@@ -333,15 +322,15 @@ class Container:
             except KeyError:
                 creator = self._prime_noscope_creator(interface)
             if creator is not None:
-                return creator(None)  # type: ignore[operator]
+                return creator(None)
             scope = Scope(self)
             return self._resolve_one(interface, scope, None)
         return self._resolve_slow(interface, name)
 
     def _prime_noscope_creator(
-        self, interface: Union[Type, str]
-    ) -> Optional[Callable[[Any], Any]]:
-        creator: Optional[Callable[[Any], Any]] = None
+        self, interface: type | str
+    ) -> Callable[[Any], Any] | None:
+        creator: Callable[[Any], Any] | None = None
         registrations = self._registrations.get((interface, None))
         if registrations:
             registration = registrations[0]
@@ -359,7 +348,7 @@ class Container:
         self._noscope_creators[interface] = creator
         return creator
 
-    def _resolve_slow(self, interface: Union[Type, str], name: Optional[str]) -> Any:
+    def _resolve_slow(self, interface: type | str, name: str | None) -> Any:
         key = (interface, name)
         registrations = self._registrations.get(key)
         if registrations:
@@ -368,19 +357,15 @@ class Container:
                 self._get_fast_creator(registration, key)
             fast_creator = registration.fast_creator
             if fast_creator is not None and not registration.fast_creator_needs_scope:
-                return fast_creator(None)  # type: ignore[arg-type]
+                return fast_creator(None)
         scope = self.create_scope()
         return self._resolve_one(interface, scope, name)
 
     @overload
-    def resolve_all(
-        self, interface: type[T], name: Optional[str] = None
-    ) -> List[T]: ...
+    def resolve_all(self, interface: type[T], name: str | None = None) -> list[T]: ...
     @overload
-    def resolve_all(self, interface: str, name: Optional[str] = None) -> List[Any]: ...
-    def resolve_all(
-        self, interface: Union[Type, str], name: Optional[str] = None
-    ) -> List[Any]:
+    def resolve_all(self, interface: str, name: str | None = None) -> list[Any]: ...
+    def resolve_all(self, interface: type | str, name: str | None = None) -> list[Any]:
         """Resolve all unnamed implementations registered for a type."""
         scope = self.create_scope()
         return scope.resolve_all(interface, name)
@@ -390,9 +375,9 @@ class Container:
         resources use ``async with container.ascope()`` instead."""
         return Scope(self)
 
-    def validate(self) -> List[ValidationError]:
+    def validate(self) -> list[ValidationError]:
         """Validate registered dependency graphs without creating service instances."""
-        errors: List[ValidationError] = []
+        errors: list[ValidationError] = []
         for key, registrations in self._registrations.items():
             for registration in registrations:
                 errors.extend(self._validate_registration(key, registration, []))
@@ -405,8 +390,8 @@ class Container:
             raise ContainerValidationException(errors)
 
     def _resolve_in_scope(
-        self, interface: Union[Type, str], scope: Scope, name: Optional[str] = None
-    ) -> List[Any]:
+        self, interface: type | str, scope: Scope, name: str | None = None
+    ) -> list[Any]:
         key = (interface, name)
         registrations = self._registrations.get(key, [])
         instances = []
@@ -416,7 +401,7 @@ class Container:
         return instances
 
     def _resolve_one(
-        self, interface: Union[Type, str], scope: Scope, name: Optional[str] = None
+        self, interface: type | str, scope: Scope, name: str | None = None
     ) -> Any:
         key = (interface, name)
         registrations = self._registrations.get(key)
@@ -429,15 +414,15 @@ class Container:
 
     def _validate_registration(
         self,
-        key: Tuple[Union[Type, str], Optional[str]],
+        key: tuple[type | str, str | None],
         registration: Registration,
-        path: List[Tuple[Union[Type, str], Optional[str]]],
-    ) -> List[ValidationError]:
+        path: list[tuple[type | str, str | None]],
+    ) -> list[ValidationError]:
         if registration.kind == RegistrationType.INSTANCE:
             return []
 
         if key in path:
-            cycle = path + [key]
+            cycle = [*path, key]
             return [
                 ValidationError(
                     key[0],
@@ -455,25 +440,25 @@ class Container:
                         key[0], key[1], "Service registration has no implementation."
                     )
                 ]
-            return self._validate_class(registration.implementation, key, path + [key])
+            return self._validate_class(registration.implementation, key, [*path, key])
 
         if registration.kind == RegistrationType.FACTORY:
             if registration.factory is None:
                 return [
                     ValidationError(key[0], key[1], "Factory registration is empty.")
                 ]
-            return self._validate_callable(registration.factory, key, path + [key])
+            return self._validate_callable(registration.factory, key, [*path, key])
 
         return [ValidationError(key[0], key[1], "Registration kind is not supported.")]
 
     def _validate_class(
         self,
-        cls: Type,
-        source_key: Tuple[Union[Type, str], Optional[str]],
-        path: List[Tuple[Union[Type, str], Optional[str]]],
-    ) -> List[ValidationError]:
-        errors: List[ValidationError] = []
-        constructor = cls.__init__
+        cls: type,
+        source_key: tuple[type | str, str | None],
+        path: list[tuple[type | str, str | None]],
+    ) -> list[ValidationError]:
+        errors: list[ValidationError] = []
+        constructor = cls.__init__  # type: ignore[misc]
         if constructor is not object.__init__:
             errors.extend(
                 self._validate_callable(constructor, source_key, path, skip_self=True)
@@ -509,11 +494,11 @@ class Container:
     def _validate_callable(
         self,
         func: Callable[..., Any],
-        source_key: Tuple[Union[Type, str], Optional[str]],
-        path: List[Tuple[Union[Type, str], Optional[str]]],
+        source_key: tuple[type | str, str | None],
+        path: list[tuple[type | str, str | None]],
         skip_self: bool = False,
-    ) -> List[ValidationError]:
-        errors: List[ValidationError] = []
+    ) -> list[ValidationError]:
+        errors: list[ValidationError] = []
         try:
             parameters = _get_parameters(func)
         except Exception as exc:
@@ -560,11 +545,11 @@ class Container:
     def _validate_dependency(
         self,
         dependency_type: Any,
-        source_key: Tuple[Union[Type, str], Optional[str]],
-        path: List[Tuple[Union[Type, str], Optional[str]]],
+        source_key: tuple[type | str, str | None],
+        path: list[tuple[type | str, str | None]],
         dependency_name: str,
         has_default: bool = False,
-    ) -> List[ValidationError]:
+    ) -> list[ValidationError]:
         is_optional = False
         origin = get_origin(dependency_type)
         if origin in (Union, types.UnionType):
@@ -588,16 +573,14 @@ class Container:
                 )
             ]
 
-        errors: List[ValidationError] = []
+        errors: list[ValidationError] = []
         for registration in registrations:
             errors.extend(
                 self._validate_registration(dependency_key, registration, path)
             )
         return errors
 
-    def _get_validation_key(
-        self, dependency_type: Any
-    ) -> Tuple[Union[Type, str], None]:
+    def _get_validation_key(self, dependency_type: Any) -> tuple[type | str, None]:
         if isinstance(dependency_type, str):
             for registered_service, registered_name in self._registrations:
                 if registered_name is None and (
@@ -610,8 +593,8 @@ class Container:
     def _get_fast_creator(
         self,
         registration: Registration,
-        key: Tuple[Union[Type, str], Optional[str]],
-    ) -> Optional[Callable[[Scope], Any]]:
+        key: tuple[type | str, str | None],
+    ) -> Callable[[Scope], Any] | None:
         if registration.fast_creator_version == self._version:
             return registration.fast_creator
 
@@ -631,8 +614,8 @@ class Container:
     def _build_flat_creator(
         self,
         registration: Registration,
-        key: Tuple[Union[Type, str], Optional[str]],
-    ) -> Optional[Tuple[Callable[[Any], Any], bool]]:
+        key: tuple[type | str, str | None],
+    ) -> tuple[Callable[[Any], Any], bool] | None:
         """Compile a flat creator for a transient service graph.
 
         Transient services are inlined into a single constructed expression;
@@ -655,9 +638,9 @@ class Container:
         ):
             return None
 
-        namespace: Dict[str, Any] = {}
-        prelude: List[str] = []
-        shared: Dict[Any, str] = {}
+        namespace: dict[str, Any] = {}
+        prelude: list[str] = []
+        shared: dict[Any, str] = {}
         counter = [0]
         needs_scope = [False]
 
@@ -669,8 +652,8 @@ class Container:
 
         def emit(
             reg: Registration,
-            node_key: Tuple[Union[Type, str], Optional[str]],
-            path: frozenset,
+            node_key: tuple[type | str, str | None],
+            path: frozenset[Any],
         ) -> str:
             if reg.kind == RegistrationType.INSTANCE:
                 if node_key in shared:
@@ -717,7 +700,7 @@ class Container:
 
             # Transient: inline the constructor, recursing into dependencies.
             child_path = path | {node_key}
-            child_exprs: List[str] = []
+            child_exprs: list[str] = []
             for dependency_plan in plan.dependencies:
                 if dependency_plan.inject_container:
                     raise _NotFlat
@@ -748,13 +731,13 @@ class Container:
         source_lines = ["def _flat(scope):"]
         source_lines.extend(f"    {line}" for line in prelude)
         source_lines.append(f"    return {root_expr}")
-        local: Dict[str, Any] = {}
-        exec("\n".join(source_lines), namespace, local)  # noqa: S102
+        local: dict[str, Any] = {}
+        exec("\n".join(source_lines), namespace, local)
         return local["_flat"], needs_scope[0]
 
     def _get_async_creator(
-        self, interface: Union[Type, str], name: Optional[str]
-    ) -> Optional[Tuple[Callable[[Any], Any], bool]]:
+        self, interface: type | str, name: str | None
+    ) -> tuple[Callable[[Any], Any], bool] | None:
         # Cache under the bare interface for the common name=None case so the
         # hot path does a direct dict lookup with no per-call tuple allocation.
         cache_key: Any = interface if name is None else (interface, name)
@@ -763,7 +746,7 @@ class Container:
             return cached  # type: ignore[return-value]
         reg_key = (interface, name)
         registrations = self._registrations.get(reg_key)
-        result: Optional[Tuple[Callable[[Any], Any], bool]] = None
+        result: tuple[Callable[[Any], Any], bool] | None = None
         if registrations:
             result = self._build_async_flat_creator(registrations[0], reg_key)
         self._async_creators[cache_key] = result
@@ -772,8 +755,8 @@ class Container:
     def _build_async_flat_creator(
         self,
         registration: Registration,
-        key: Tuple[Union[Type, str], Optional[str]],
-    ) -> Optional[Tuple[Callable[[Any], Any], bool]]:
+        key: tuple[type | str, str | None],
+    ) -> tuple[Callable[[Any], Any], bool] | None:
         """Compile an ``async def`` creator that inlines the synchronous parts of
         the graph and awaits only genuine async nodes.
 
@@ -785,9 +768,9 @@ class Container:
         caller falls back to the fully interpreted async walk. As in the sync
         builder, no user names or values are interpolated into generated source.
         """
-        namespace: Dict[str, Any] = {}
-        prelude: List[str] = []
-        shared: Dict[Any, str] = {}
+        namespace: dict[str, Any] = {}
+        prelude: list[str] = []
+        shared: dict[Any, str] = {}
         counter = [0]
         needs_scope = [False]
 
@@ -797,9 +780,7 @@ class Container:
             namespace[sym] = obj
             return sym
 
-        def delegate(
-            reg: Registration, node_key: Tuple[Union[Type, str], Optional[str]]
-        ) -> str:
+        def delegate(reg: Registration, node_key: tuple[type | str, str | None]) -> str:
             lifestyle = reg.lifestyle
             if lifestyle == LifeStyle.SCOPED or (
                 reg.is_resource and lifestyle == LifeStyle.TRANSIENT
@@ -840,8 +821,8 @@ class Container:
 
         def emit(
             reg: Registration,
-            node_key: Tuple[Union[Type, str], Optional[str]],
-            path: frozenset,
+            node_key: tuple[type | str, str | None],
+            path: frozenset[Any],
         ) -> str:
             if reg.kind == RegistrationType.INSTANCE:
                 if node_key in shared:
@@ -886,7 +867,7 @@ class Container:
                 if plan.property_dependencies:
                     return delegate(reg, node_key)
                 child_path = path | {node_key}
-                child_exprs: List[str] = []
+                child_exprs: list[str] = []
                 for dependency_plan in plan.dependencies:
                     if dependency_plan.inject_container:
                         raise _NotFlat
@@ -920,16 +901,16 @@ class Container:
         source_lines = ["async def _aflat(scope):"]
         source_lines.extend(f"    {line}" for line in prelude)
         source_lines.append(f"    return {root_expr}")
-        local: Dict[str, Any] = {}
-        exec("\n".join(source_lines), namespace, local)  # noqa: S102
+        local: dict[str, Any] = {}
+        exec("\n".join(source_lines), namespace, local)
         return local["_aflat"], needs_scope[0]
 
     def _build_fast_creator(
         self,
         registration: Registration,
-        key: Tuple[Union[Type, str], Optional[str]],
-        path: Set[Tuple[Union[Type, str], Optional[str]]],
-    ) -> Optional[Tuple[Callable[[Scope], Any], bool]]:
+        key: tuple[type | str, str | None],
+        path: set[tuple[type | str, str | None]],
+    ) -> tuple[Callable[[Scope], Any], bool] | None:
         if registration.kind == RegistrationType.INSTANCE:
             instance = registration.instance
             return lambda scope: instance, False
@@ -946,7 +927,7 @@ class Container:
             return None
 
         path.add(key)
-        dependency_creators: List[Callable[[Scope], Any]] = []
+        dependency_creators: list[Callable[[Scope], Any]] = []
         needs_scope = registration.lifestyle == LifeStyle.SCOPED
         try:
             for dependency_plan in plan.dependencies:
@@ -1030,7 +1011,7 @@ class Container:
         self,
         registration: Registration,
         scope: Scope,
-        key: Tuple[Union[Type, str], Optional[str]],
+        key: tuple[type | str, str | None],
     ) -> Any:
         fast_creator = self._get_fast_creator(registration, key)
         if fast_creator is not None:
@@ -1083,8 +1064,8 @@ class Container:
         if cls is None:
             raise ValueError("Implementation cannot be None for service registration.")
 
-        constructor = cls.__init__
-        dependencies: Tuple[_DependencyPlan, ...] = ()
+        constructor = cls.__init__  # type: ignore[misc]
+        dependencies: tuple[_DependencyPlan, ...] = ()
         if constructor is not object.__init__:
             dependencies = _get_callable_plan(constructor, skip_self=True).dependencies
         plan = _ServicePlan(
@@ -1107,7 +1088,7 @@ class Container:
         return plan
 
     def _resolve_dependency_plan(
-        self, dependency_plan: _DependencyPlan, scope: Scope, owner: Type
+        self, dependency_plan: _DependencyPlan, scope: Scope, owner: type
     ) -> Any:
         if dependency_plan.inject_container:
             return self
@@ -1174,12 +1155,10 @@ class Container:
         return AsyncScope(self)
 
     @overload
-    async def aresolve(self, interface: type[T], name: Optional[str] = None) -> T: ...
+    async def aresolve(self, interface: type[T], name: str | None = None) -> T: ...
     @overload
-    async def aresolve(self, interface: str, name: Optional[str] = None) -> Any: ...
-    async def aresolve(
-        self, interface: Union[Type, str], name: Optional[str] = None
-    ) -> Any:
+    async def aresolve(self, interface: str, name: str | None = None) -> Any: ...
+    async def aresolve(self, interface: type | str, name: str | None = None) -> Any:
         """Resolve a service through the async path (awaits async factories).
 
         Convenience wrapper that opens a short-lived scope. Singleton resources
@@ -1196,7 +1175,7 @@ class Container:
             except KeyError:
                 creator = self._prime_noscope_creator(interface)
             if creator is not None:
-                return creator(None)  # type: ignore[operator]
+                return creator(None)
         acreator = self._get_async_creator(interface, name)
         if acreator is not None:
             creator_fn, creator_needs_scope = acreator
@@ -1213,7 +1192,7 @@ class Container:
             return await scope.aresolve(interface, name)
 
     def _guard_top_async_resource(
-        self, interface: Union[Type, str], name: Optional[str]
+        self, interface: type | str, name: str | None
     ) -> None:
         registrations = self._registrations.get((interface, name))
         if registrations:
@@ -1225,7 +1204,8 @@ class Container:
                 raise ValueError(
                     f"{interface} is a {registration.lifestyle} async resource; "
                     "aresolve() would finalize it immediately. Resolve it inside "
-                    "'async with container.ascope() as scope: await scope.aresolve(...)'."
+                    "'async with container.ascope() as scope: "
+                    "await scope.aresolve(...)'."
                 )
 
     async def aclose(self) -> None:
@@ -1246,10 +1226,10 @@ class Container:
 
     async def _aresolve_one(
         self,
-        interface: Union[Type, str],
+        interface: type | str,
         scope: AsyncScope,
-        name: Optional[str],
-        resolving: Set[Any],
+        name: str | None,
+        resolving: set[Any],
     ) -> Any:
         key = (interface, name)
         registrations = self._registrations.get(key)
@@ -1266,8 +1246,8 @@ class Container:
         self,
         registration: Registration,
         scope: AsyncScope,
-        key: Tuple[Union[Type, str], Optional[str]],
-        resolving: Set[Any],
+        key: tuple[type | str, str | None],
+        resolving: set[Any],
     ) -> Any:
         if registration.kind == RegistrationType.INSTANCE:
             return registration.instance
@@ -1300,7 +1280,7 @@ class Container:
         self,
         registration: Registration,
         scope: AsyncScope,
-        resolving: Set[Any],
+        resolving: set[Any],
         singleton: bool,
     ) -> Any:
         if registration.kind == RegistrationType.SERVICE:
@@ -1320,7 +1300,7 @@ class Container:
         raise ValueError(f"Invalid registration kind: {registration.kind}")
 
     async def _acreate_service_from_registration(
-        self, registration: Registration, scope: AsyncScope, resolving: Set[Any]
+        self, registration: Registration, scope: AsyncScope, resolving: set[Any]
     ) -> Any:
         cls = registration.implementation
         if cls is None:
@@ -1353,7 +1333,7 @@ class Container:
         self,
         registration: Registration,
         scope: AsyncScope,
-        resolving: Set[Any],
+        resolving: set[Any],
         singleton: bool,
     ) -> Any:
         factory = registration.factory
@@ -1363,7 +1343,7 @@ class Container:
         args = [
             await self._aresolve_dependency_plan(
                 dependency_plan, scope, factory, resolving
-            )  # type: ignore[arg-type]
+            )
             for dependency_plan in plan.dependencies
         ]
         if registration.is_resource:
@@ -1379,7 +1359,7 @@ class Container:
         dependency_plan: _DependencyPlan,
         scope: AsyncScope,
         owner: Any,
-        resolving: Set[Any],
+        resolving: set[Any],
     ) -> Any:
         if dependency_plan.inject_container:
             return self
@@ -1409,8 +1389,8 @@ class Container:
         self,
         instance: object,
         scope: AsyncScope,
-        property_dependencies: Tuple[_DependencyPlan, ...],
-        resolving: Set[Any],
+        property_dependencies: tuple[_DependencyPlan, ...],
+        resolving: set[Any],
     ) -> None:
         existing = getattr(instance, "__dict__", None)
         for dependency_plan in property_dependencies:
@@ -1433,7 +1413,7 @@ class Container:
         self,
         instance: object,
         scope: Scope,
-        property_dependencies: Tuple[_DependencyPlan, ...],
+        property_dependencies: tuple[_DependencyPlan, ...],
     ) -> None:
         # `__dict__` is absent on __slots__ types; getattr keeps the
         # "already set?" check working without raising on those.
@@ -1488,9 +1468,9 @@ class Container:
 
     def add_singleton(
         self,
-        interface: Type,
-        implementation: Optional[Type] = None,
-        name: Optional[str] = None,
+        interface: type,
+        implementation: type | None = None,
+        name: str | None = None,
     ) -> None:
         """Register a class created once and shared (singleton)."""
         self.register(
@@ -1499,9 +1479,9 @@ class Container:
 
     def add_transient(
         self,
-        interface: Type,
-        implementation: Optional[Type] = None,
-        name: Optional[str] = None,
+        interface: type,
+        implementation: type | None = None,
+        name: str | None = None,
     ) -> None:
         """Register a class created fresh on every resolve (transient)."""
         self.register(
@@ -1510,18 +1490,18 @@ class Container:
 
     def add_scoped(
         self,
-        interface: Type,
-        implementation: Optional[Type] = None,
-        name: Optional[str] = None,
+        interface: type,
+        implementation: type | None = None,
+        name: str | None = None,
     ) -> None:
         """Register a class created once per scope (scoped)."""
         self.register(interface, implementation, lifestyle=LifeStyle.SCOPED, name=name)
 
     def add_singleton_factory(
         self,
-        interface: Type,
+        interface: type,
         factory: Callable[..., Any],
-        name: Optional[str] = None,
+        name: str | None = None,
     ) -> None:
         """Register a factory whose result is built once and shared (singleton)."""
         self.register_factory(
@@ -1530,9 +1510,9 @@ class Container:
 
     def add_transient_factory(
         self,
-        interface: Type,
+        interface: type,
         factory: Callable[..., Any],
-        name: Optional[str] = None,
+        name: str | None = None,
     ) -> None:
         """Register a factory invoked on every resolve (transient)."""
         self.register_factory(
@@ -1541,9 +1521,9 @@ class Container:
 
     def add_scoped_factory(
         self,
-        interface: Type,
+        interface: type,
         factory: Callable[..., Any],
-        name: Optional[str] = None,
+        name: str | None = None,
     ) -> None:
         """Register a factory invoked once per scope (scoped). Async-generator
         factories yield a scoped resource finalized when the scope exits."""

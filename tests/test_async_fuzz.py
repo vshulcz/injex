@@ -16,7 +16,6 @@ import random
 from collections import Counter
 
 from injex import Container
-
 from tests.test_flat_creator_fuzz import _fingerprint, _make_graph
 
 

@@ -1,4 +1,3 @@
-from typing import Optional
 import unittest
 from abc import ABC, abstractmethod
 
@@ -127,7 +126,8 @@ class TestContainer(unittest.TestCase):
         with self.assertRaises(MissingTypeAnnotationException) as context:
             self.container.resolve(ServiceE)
         self.assertIn(
-            "Missing type annotation for parameter 'missing_annotation' in class 'ServiceE'.",
+            "Missing type annotation for parameter 'missing_annotation' "
+            "in class 'ServiceE'.",
             str(context.exception),
         )
 
@@ -212,7 +212,7 @@ class TestContainer(unittest.TestCase):
                 return "Optional service is doing something."
 
         class MainService:
-            def __init__(self, optional_service: Optional[IOptionalService] = None):
+            def __init__(self, optional_service: IOptionalService | None = None):
                 self.optional_service = optional_service
 
             def perform_action(self):
@@ -312,7 +312,7 @@ class TestContainer(unittest.TestCase):
         class IService(ABC): ...
 
         class ConsumerService:
-            def __init__(self, service: Optional[IService] = None):
+            def __init__(self, service: IService | None = None):
                 self.service = service
 
         self.container.register(ConsumerService)
@@ -407,7 +407,7 @@ class TestContainer(unittest.TestCase):
         class IService(ABC): ...
 
         class Consumer:
-            def __init__(self, service: Optional[IService] = None):
+            def __init__(self, service: IService | None = None):
                 self.service = service
 
         self.container.register(Consumer)
@@ -1063,7 +1063,7 @@ class TestContainer(unittest.TestCase):
         class Cache: ...
 
         class Service:
-            def __init__(self, cache: Optional[Cache] = None):
+            def __init__(self, cache: Cache | None = None):
                 self.cache = cache
 
         self.container.add_transient(Service)
@@ -1164,7 +1164,7 @@ class TestContainer(unittest.TestCase):
         class Service:
             @inject
             @abstractmethod
-            def cache(self) -> Optional[Cache]: ...
+            def cache(self) -> Cache | None: ...
 
         self.container.add_transient(Service)
 
