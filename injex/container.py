@@ -739,6 +739,13 @@ class Container:
         builder and then to the interpreted path. No service names, class names,
         or user values are ever interpolated into generated source — only opaque
         generated symbols bound in a private namespace.
+
+        The async counterpart, ``_build_async_flat_creator``, mirrors this logic
+        (bind/emit, transient inlining, singleton CSE). Keep changes to the two in
+        sync. The one deliberate difference: a transient with property injection is
+        rejected here (``raise _NotFlat``) but delegated to the interpreted path
+        there, because the async path can finish such a node without bailing the
+        whole graph.
         """
         if (
             registration.kind != RegistrationType.SERVICE
@@ -875,6 +882,10 @@ class Container:
         property injection on an inlined transient, container injection), so the
         caller falls back to the fully interpreted async walk. As in the sync
         builder, no user names or values are interpolated into generated source.
+
+        This mirrors ``_build_flat_creator``; keep the two in sync. Unlike the sync
+        builder it delegates a property-injected transient to the interpreted path
+        instead of rejecting the whole graph.
         """
         namespace: dict[str, Any] = {}
         prelude: list[str] = []

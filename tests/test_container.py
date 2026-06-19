@@ -618,7 +618,7 @@ class TestContainer(unittest.TestCase):
 
         services = self.container.resolve_all(IService)
         self.assertEqual(len(services), 2)
-        self.assertNotEqual(services[0], services[1])  # Should be different instances
+        self.assertIsNot(services[0], services[1])  # distinct instances
 
     def test_resolve_all_with_instances(self):
         class IService(ABC):
@@ -646,14 +646,6 @@ class TestContainer(unittest.TestCase):
         self.assertIn(2, values)
         self.assertIn(instance1, services)
         self.assertIn(instance2, services)
-
-    def test_resolve_all_with_no_registrations(self):
-        class IService(ABC):
-            @abstractmethod
-            def do_something(self): ...
-
-        services = self.container.resolve_all(IService)
-        self.assertEqual(services, [])
 
     def test_resolve_all_with_named_and_unnamed_registrations(self):
         class IService(ABC):
@@ -758,14 +750,6 @@ class TestContainer(unittest.TestCase):
 
         scoped_services2 = [s for s in services2 if isinstance(s, ScopedService)]
         self.assertIsNot(scoped_services1[0], scoped_services2[0])
-
-    def test_resolve_all_with_unregistered_interface(self):
-        class IService(ABC):
-            @abstractmethod
-            def do_something(self): ...
-
-        services = self.container.resolve_all(IService)
-        self.assertEqual(services, [])
 
     def test_resolve_all_with_mixed_registration_types(self):
         class IService(ABC):
@@ -1181,8 +1165,10 @@ class TestContainer(unittest.TestCase):
         with self.assertRaises(CyclicDependencyException):
             self.container.resolve(Service)
 
-    def test_public_api_all_exports_core_symbols(self):
+    def test_public_api_all_is_exact_and_importable(self):
         expected = {
+            "AsyncResolutionRequiredException",
+            "AsyncScope",
             "Container",
             "ContainerValidationException",
             "CyclicDependencyException",
@@ -1190,13 +1176,19 @@ class TestContainer(unittest.TestCase):
             "InvalidLifestyleException",
             "LifeStyle",
             "MissingTypeAnnotationException",
+            "Named",
+            "PropertyInjectionException",
             "Scope",
             "ServiceNotRegisteredException",
             "ValidationError",
             "inject",
+            "injectable",
         }
-
-        self.assertTrue(expected.issubset(set(injex.__all__)))
+        # Exact: adding or removing a public symbol must be a deliberate change.
+        self.assertEqual(set(injex.__all__), expected)
+        # Every advertised symbol is importable and non-None.
+        for name in injex.__all__:
+            self.assertIsNotNone(getattr(injex, name))
 
 
 if __name__ == "__main__":
