@@ -30,10 +30,14 @@ dependencies = []
 [project.optional-dependencies]
 fastapi = ["fastapi>=0.100"]
 
+# Installed only by the type-check job and the dedicated FastAPI test job, so the
+# main test matrix (incl. Python 3.14, where pydantic-core has no wheel yet) does
+# not have to build pydantic. The FastAPI tests skip when these aren't present.
+[dependency-groups]
+fastapi = ["fastapi>=0.100", "httpx>=0.27"]
+
 [tool.uv]
 dev-dependencies = [
-    "fastapi>=0.100",
-    "httpx>=0.27",
     "mypy>=1.12.1",
     "pytest-cov>=6.0.0",
     "pytest>=8.3.3",

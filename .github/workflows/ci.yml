@@ -62,7 +62,7 @@ jobs:
           python-version: "3.13"
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --group fastapi
 
       - name: Run type checks
         run: uv run mypy injex tests
@@ -99,6 +99,30 @@ jobs:
         with:
           name: coverage-${{ matrix.python-version }}
           path: coverage.xml
+
+  fastapi:
+    name: FastAPI integration
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync --group fastapi
+
+      - name: Run FastAPI integration tests
+        run: uv run pytest tests/test_ext_fastapi.py --no-cov
 
   coverage:
     name: Upload Coverage to Codecov
