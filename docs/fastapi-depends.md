@@ -60,19 +60,14 @@ The rule of thumb: FastAPI adapts HTTP; the application owns service wiring.
 
 See also: [`examples/fastapi_lifespan.py`](../examples/fastapi_lifespan.py).
 
+## FastAPI route example
 
-
-## Dependency wrapper recipe
-
-When a FastAPI route needs an application service from Injex, keep the container access inside a small dependency wrapper instead of resolving directly in the route.
+Here is how to use the existing `get_register_user` dependency in a FastAPI route.
 
 ```python
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
 
 router = APIRouter()
-
-def get_register_user(request: Request) -> RegisterUser:
-    return request.app.state.services.container.resolve(RegisterUser)
 
 @router.post("/register")
 def register_user(
@@ -80,3 +75,4 @@ def register_user(
     use_case: RegisterUser = Depends(get_register_user),
 ) -> int:
     return use_case.execute(email)
+```
