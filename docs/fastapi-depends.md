@@ -59,3 +59,20 @@ services.register_user.execute("ada@example.com")
 The rule of thumb: FastAPI adapts HTTP; the application owns service wiring.
 
 See also: [`examples/fastapi_lifespan.py`](../examples/fastapi_lifespan.py).
+
+## FastAPI route example
+
+Here is how to use the existing `get_register_user` dependency in a FastAPI route.
+
+```python
+from fastapi import APIRouter, Depends
+
+router = APIRouter()
+
+@router.post("/register")
+def register_user(
+    email: str,
+    use_case: RegisterUser = Depends(get_register_user),
+) -> int:
+    return use_case.execute(email)
+```
