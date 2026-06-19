@@ -56,7 +56,13 @@ Use scoped registrations for request-owned objects, such as database sessions,
 unit-of-work objects, request context, or per-request caches. Keep long-lived
 clients as singletons.
 
-See also: [`examples/fastapi_app.py`](../examples/fastapi_app.py).
+The boilerplate above (the scope dependency and the per-service wrapper) is what
+the optional `injex.ext.fastapi` integration writes for you — `setup_injex(app,
+container)` plus `use_case: RegisterUser = Provide(RegisterUser)`. See
+[Compared to FastAPI Depends](./fastapi-depends.md#optional-integration).
+
+See also: [`examples/fastapi_app.py`](../examples/fastapi_app.py) and
+[`examples/fastapi_ext.py`](../examples/fastapi_ext.py).
 
 ## Worker job scope
 
@@ -167,7 +173,21 @@ def main() -> None:
     container.resolve(SyncUsersCommand).run()
 ```
 
-See also: [`examples/cli_app.py`](../examples/cli_app.py).
+With Typer or Click, `injex.ext.cli` injects the command object so the framework
+only sees real CLI arguments:
+
+```python
+from injex.ext.cli import Inject, wire
+
+
+@app.command()
+@wire(container)
+def sync_users(command: SyncUsersCommand = Inject()) -> None:
+    command.run()
+```
+
+See also: [`examples/cli_app.py`](../examples/cli_app.py) and
+[`examples/cli_injection.py`](../examples/cli_injection.py).
 
 ## Test override boundary
 
