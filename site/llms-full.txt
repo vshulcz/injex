@@ -31,12 +31,22 @@ use_case = container.resolve(RegisterUser)
 - Constructor injection from Python type hints.
 - Singleton, transient, and scoped lifetimes.
 - Factories and prebuilt instances.
-- Named registrations.
-- Optional dependencies.
+- Named registrations, injectable into constructors via `Annotated[T, Named(...)]`.
+- Optional dependencies and property injection.
 - Temporary test overrides.
 - Graph validation before startup.
 - Cycle detection.
 - Cached dependency plans and fast repeated resolves.
+- Resources with teardown: sync (`def f(): ...; yield x; cleanup()`) and async
+  (`async def f(): ...; yield x; await cleanup()`) generator factories, finalized
+  when their scope exits or on `container.close()` / `await container.aclose()`.
+- Async resolution: `aresolve()`, `ascope()`, `acall()`, `aclose()`.
+- Function injection: `container.call(fn, **overrides)` (and async `acall`) inject
+  a function's annotated parameters while the caller passes the rest.
+- Auto-registration: mark classes with `@injectable` and register a module with
+  `container.scan(module)`; nothing registers as an import side effect.
+- Integrations: `injex.ext.fastapi` (`setup_injex` + `Provide`, one scope per
+  request) and `injex.ext.cli` (`Inject` + `wire` for Typer/Click commands).
 
 ## Target use cases
 
