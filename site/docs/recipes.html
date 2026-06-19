@@ -70,8 +70,9 @@ container.assert_valid()
 
 app = FastAPI()
 
-def get_scope() -&gt; Scope:
-    return container.create_scope()
+def get_scope() -&gt; Iterator[Scope]:
+    with container.create_scope() as scope:  # finalizes scoped resources on exit
+        yield scope
 
 def get_register_user(scope: Scope = Depends(get_scope)) -&gt; RegisterUser:
     return scope.resolve(RegisterUser)
@@ -81,7 +82,9 @@ def create_user(use_case: RegisterUser = Depends(get_register_user)):
     return use_case.execute()</code></pre>
         <p>
           Register request-owned objects as scoped services. Keep long-lived
-          clients as singletons.
+          clients as singletons. The optional
+          <a href="./fastapi-depends.html#optional-integration"><code>injex.ext.fastapi</code></a>
+          integration writes this scope-per-request glue for you.
         </p>
 
         <h2>Worker job scope</h2>
@@ -126,6 +129,16 @@ def main() -&gt; None:
     settings = Settings(api_url="https://api.example.com")
     container = build_container(settings)
     container.resolve(SyncUsersCommand).run()</code></pre>
+        <p>
+          With Typer or Click, <code>injex.ext.cli</code> injects the command object
+          so the framework only sees real CLI arguments:
+        </p>
+        <pre><code>from injex.ext.cli import Inject, wire
+
+@app.command()
+@wire(container)
+def sync_users(command: SyncUsersCommand = Inject()) -&gt; None:
+    command.run()</code></pre>
 
         <h2>Test override boundary</h2>
         <p>
