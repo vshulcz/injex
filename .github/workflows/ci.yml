@@ -160,10 +160,10 @@ jobs:
       - name: Check relative links
         uses: lycheeverse/lychee-action@v2
         with:
-          # --offline checks local files only (no flaky network). The /injex/...
-          # links are root-relative for the deployed GitHub Pages site and only
-          # resolve there, so exclude that prefix.
-          args: '--offline --no-progress --exclude "^/injex/" README.md CHANGELOG.md CONTRIBUTING.md ROADMAP.md docs site'
+          # --offline checks local files only (no flaky network). 404.html uses
+          # root-relative /injex/ links that only resolve on the deployed Pages
+          # site, which lychee can't build offline — skip just that file.
+          args: "--offline --no-progress --exclude-path site/404.html README.md CHANGELOG.md CONTRIBUTING.md ROADMAP.md docs site"
           fail: true
 
   coverage:
