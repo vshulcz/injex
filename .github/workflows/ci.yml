@@ -12,6 +12,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   UV_FROZEN: "1"
 
@@ -43,6 +47,9 @@ jobs:
       - name: Run format checks
         run: uv run ruff format --check .
 
+      - name: Spell check
+        run: uv run --with codespell codespell .
+
   type-check:
     name: Type Checking
     runs-on: ubuntu-latest
@@ -70,11 +77,25 @@ jobs:
         run: uv run --no-sync mypy injex tests
 
   test:
-    name: Run Tests
-    runs-on: ubuntu-latest
+    name: Tests (${{ matrix.os }} / ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
+        os: [ubuntu-latest]
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        include:
+          # Cross-OS smoke on the oldest and newest supported Pythons —
+          # threading, asyncio, the exec-compiled creators, and file-backed
+          # resources all need to behave the same off Linux.
+          - os: macos-latest
+            python-version: "3.10"
+          - os: macos-latest
+            python-version: "3.13"
+          - os: windows-latest
+            python-version: "3.10"
+          - os: windows-latest
+            python-version: "3.13"
 
     steps:
       - name: Checkout code
@@ -99,7 +120,7 @@ jobs:
       - name: Upload coverage file
         uses: actions/upload-artifact@v7
         with:
-          name: coverage-${{ matrix.python-version }}
+          name: coverage-${{ matrix.os }}-${{ matrix.python-version }}
           path: coverage.xml
 
   fastapi:
@@ -128,6 +149,23 @@ jobs:
       - name: Run FastAPI integration tests
         run: uv run --no-sync pytest tests/test_ext_fastapi.py --no-cov
 
+  links:
+    name: Link Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Check relative links
+        uses: lycheeverse/lychee-action@v2
+        with:
+          # --offline checks local files only (no flaky network). 404.html uses
+          # root-relative /injex/ links that only resolve on the deployed Pages
+          # site, which lychee can't build offline — skip just that file.
+          args: "--offline --no-progress --exclude-path site/404.html README.md CHANGELOG.md CONTRIBUTING.md ROADMAP.md docs site"
+          fail: true
+
   coverage:
     name: Upload Coverage to Codecov
     runs-on: ubuntu-latest
@@ -140,7 +178,7 @@ jobs:
       - name: Download coverage files
         uses: actions/download-artifact@v8
         with:
-          name: coverage-3.10
+          name: coverage-ubuntu-latest-3.10
 
       - name: Upload coverage to Codecov
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}

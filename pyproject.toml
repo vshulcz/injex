@@ -57,6 +57,10 @@ injex = ["py.typed"]
 [tool.setuptools.packages.find]
 include = ["injex*"]
 
+[tool.codespell]
+skip = "./.git,./.venv,./dist,./uv.lock,./site/assets,*.svg,*.png,*.ico"
+ignore-words-list = "injex"
+
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 

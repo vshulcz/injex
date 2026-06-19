@@ -6,6 +6,7 @@
 [![Coverage](https://codecov.io/gh/vshulcz/injex/branch/main/graph/badge.svg)](https://codecov.io/gh/vshulcz/injex)
 [![Python](https://img.shields.io/badge/python-3.10%E2%80%933.14-blue)](https://pypi.org/project/injex/)
 [![License](https://img.shields.io/github/license/vshulcz/injex.svg)](./LICENSE)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/vshulcz/injex/badge)](https://scorecard.dev/viewer/?uri=github.com/vshulcz/injex)
 
 **Tiny typed dependency injection for Python that catches missing dependencies and
 cycles _before_ your app starts — with zero runtime dependencies.**
