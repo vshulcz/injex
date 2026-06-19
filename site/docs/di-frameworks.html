@@ -65,25 +65,21 @@
         </p>
 
         <h2>Where Injex loses</h2>
-        <p>Pick a larger framework when you need any of these — Injex deliberately
-          doesn't do them:</p>
+        <p>Pick a larger framework when you need this — Injex deliberately doesn't
+          do it:</p>
         <ul>
-          <li><strong>Framework-native scopes for async resources.</strong> Injex does
-            open and close async resources (connection pools,
-            <code>async def ... yield</code>) via <code>ascope()</code> /
-            <code>aclose()</code> — see <a href="./async.html">async resolution</a>.
-            What the larger frameworks add is deeper integration with framework-managed
-            request/session scopes; Dishka in particular wires its scopes directly into
-            FastAPI/Litestar. With Injex you open the scope yourself at the request
-            boundary.</li>
-          <li><strong>A configuration/provider DSL.</strong> If wiring config values
-            through provider objects is part of your architecture,
-            <code>dependency-injector</code> is purpose-built for it.</li>
-          <li><strong>Deep framework auto-wiring.</strong> Dishka and Wireup plug
-            directly into FastAPI or task-framework scopes and inject into handler
-            signatures. Injex stays at the composition root and lets the framework
-            adapt the graph at its edge.</li>
+          <li><strong>A configuration/provider DSL.</strong> Loading config from
+            env/files, coercing types, and wiring values through provider objects is
+            <code>dependency-injector</code>'s domain. In Injex configuration is a
+            normal dependency: register a settings object, or values as named
+            registrations and inject them with <code>Annotated[T, Named(...)]</code>.</li>
         </ul>
+        <p>Things people assume Injex can't do, but it can: it manages async and sync
+          resource lifecycles via <code>ascope()</code> / <code>create_scope()</code>,
+          injects into FastAPI routes through
+          <a href="./fastapi-depends.html"><code>injex.ext.fastapi</code></a>, and
+          injects into any function (Typer/Click commands, workers) through
+          <code>container.call()</code>.</p>
         <p>For the general manual-vs-framework-vs-Injex decision, see the
           <a href="./comparison.html">comparison guide</a>.</p>
 

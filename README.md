@@ -123,12 +123,19 @@ if the graph needs async work, so you never silently get an un-awaited object. S
 [async resolution](./docs/async.md) and the
 [FastAPI example](./examples/fastapi_async.py).
 
-## Where it doesn't fit (yet)
+## Scope and non-goals
 
-- **No provider/config DSL.** If you want a rich configuration-injection system,
-  `dependency-injector` is a better fit.
-- **No deep framework auto-wiring.** Injex owns the graph; FastAPI/Typer adapt it at
-  their edge — it won't inject into route signatures for you.
+Injex stays small on purpose. Its one deliberate non-goal:
+
+- **No config-provider DSL.** Configuration is just another dependency: register a
+  settings object with `add_instance`, or individual values as named registrations
+  (`add_instance(str, dsn, name="database_url")`, injected with
+  `Annotated[str, Named("database_url")]`). Loading and coercing config from
+  env/files is left to tools built for it (`pydantic-settings`).
+
+Framework wiring it *does* do: [`injex.ext.fastapi`](./docs/fastapi-depends.md)
+injects services into FastAPI routes, and `container.call(fn, ...)` injects into
+any function — Typer/Click commands, workers, message handlers.
 
 ## Performance
 
