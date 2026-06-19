@@ -5,28 +5,28 @@ and documentation rather than framework-specific abstractions.
 
 ## Near term
 
-- Expand framework and background worker examples based on real usage patterns.
-- Improve public method type hints without making the API harder to read.
-- Add more validation coverage for named and scoped registrations.
-- Document common error messages and fixes.
+- Grow recipes, migration, and example coverage from real usage patterns.
+- Document common error messages and their fixes.
 
 ## Later
 
 - Explore opt-in diagnostics for registration inspection (print/inspect the
   resolved graph).
-- Grow the recipe and migration guides as real usage patterns emerge.
 
 ## Done
 
-- Published the documentation site at
-  [vshulcz.github.io/injex](https://vshulcz.github.io/injex/).
-- Added recipes for CLI, web, worker, and clean architecture layouts.
-- Added a reproducible resolve benchmark and performance notes.
-- Cached dependency plans with a fast path for common constructor graphs.
+- Typed `resolve` / `resolve_all` / `aresolve` overloads and strict mypy.
+- Named injection via `Annotated[T, Named(...)]`.
+- Sync and async resources with teardown; `close()` / `aclose()`.
+- Function injection (`call()` / `acall()`) and auto-registration
+  (`@injectable` + `scan()`).
+- FastAPI (`injex.ext.fastapi`) and Typer/Click (`injex.ext.cli`) integrations.
+- Published the documentation site and a reproducible resolve benchmark.
+- Cached dependency plans with a fast compiled path for common graphs.
 
 ## Non-goals
 
-- No runtime dependencies.
-- No framework-specific core package code.
+- No runtime dependencies in the core package (integrations live in optional
+  `injex.ext.*`, installed via extras).
 - No decorators required for constructor injection.
 - No large configuration DSL.

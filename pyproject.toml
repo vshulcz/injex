@@ -24,7 +24,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Application Frameworks",
     "Typing :: Typed",
 ]
-keywords = ["dependency-injection", "di", "container", "ioc", "clean-architecture", "testing"]
+keywords = ["dependency-injection", "di", "container", "ioc", "inversion-of-control", "clean-architecture", "fastapi", "typer", "testing"]
 dependencies = []
 
 [project.optional-dependencies]

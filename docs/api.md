@@ -17,8 +17,15 @@ from injex import Container
 - `add_transient_factory(interface, factory, name=None)`
 - `add_scoped_factory(interface, factory, name=None)`
 - `add_instance(interface, instance, name=None)`
+- `register(interface, implementation=None, lifestyle="transient", name=None)` and
+  `register_factory(interface, factory, lifestyle="transient", name=None)` are the
+  general forms the `add_*` helpers wrap.
+- `scan(*modules_or_iterables)` registers every `@injectable`-marked class found in
+  the given modules (only classes defined there) or in an explicit iterable.
 
-If `implementation` is omitted, Injex uses `interface` as the concrete class.
+If `implementation` is omitted, Injex uses `interface` as the concrete class. A
+generator factory (`def f(...): ...; yield x; cleanup()`, or `async def`) is
+treated as a resource with teardown.
 
 ### Resolving
 
@@ -79,6 +86,23 @@ the same `add_*_factory` methods and resolved through the async API.
 
 The synchronous `resolve()` raises `AsyncResolutionRequiredException` if the graph
 needs async work. See [async resolution](./async.md) for the full guide.
+
+## Decorators and markers
+
+Importable from `injex`:
+
+- `@inject` — mark a method for property injection; its return type is resolved
+  and set as an attribute.
+- `@injectable(lifestyle="transient", name=None, provides=None)` — mark a class for
+  `container.scan()` to register.
+- `Named("name")` — used inside `Annotated[T, Named("name")]` to inject a named
+  registration.
+
+## Integrations
+
+- `injex.ext.fastapi`: `setup_injex(app, container)` and `Provide(T)` — see
+  [FastAPI](./fastapi-depends.md#optional-integration). Install `injex[fastapi]`.
+- `injex.ext.cli`: `Inject()` and `wire(container)` for Typer/Click commands.
 
 ## Exceptions
 

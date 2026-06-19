@@ -235,12 +235,12 @@ class ReportJob:
 
 ## Optional dependencies
 
-A parameter typed `Optional[...]` (or with a default) resolves to `None` (or the
+A parameter typed `X | None` (or with a default) resolves to `None` (or the
 default) when nothing is registered for it, instead of raising.
 
 ```python
 class DataService:
-    def __init__(self, cache: Optional[Cache] = None):
+    def __init__(self, cache: Cache | None = None):
         self.cache = cache
 
 
