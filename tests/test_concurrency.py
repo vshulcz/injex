@@ -31,7 +31,7 @@ def test_no_false_cycles_under_concurrent_interpreted_resolve():
         for _ in range(5000):
             try:
                 c.resolve(Service)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 errors.append(type(exc).__name__)
 
     threads = [threading.Thread(target=worker) for _ in range(8)]

@@ -12,7 +12,6 @@ defaulted parameters.
 """
 
 import random
-import typing
 
 import pytest
 
@@ -45,7 +44,7 @@ def _make_graph(seed):
         deps.append(sorted(rng.sample(candidates, count)))
 
     lifestyles = []
-    for i in range(n):
+    for _ in range(n):
         lifestyles.append(
             rng.choice(["transient", "singleton", "scoped", "instance", "transient"])
         )
@@ -78,7 +77,7 @@ def _make_graph(seed):
             if kind[0] == "opt":
                 name = f"o{len(params) + len(tail)}"
                 params.append(name)
-                annotations[name] = typing.Optional[phantom]
+                annotations[name] = phantom | None
             else:
                 name = f"k{len(params) + len(tail)}"
                 params.append(f"{name}={kind[1]!r}")

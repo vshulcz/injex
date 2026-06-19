@@ -1,7 +1,6 @@
 import inspect
 import unittest
 from abc import abstractmethod
-from typing import Optional
 
 import injex
 import injex.container as container_module
@@ -147,7 +146,7 @@ class TestCoverageEdges(unittest.TestCase):
         class Missing: ...
 
         class OptionalConsumer:
-            def __init__(self, missing: Optional[Missing] = None):
+            def __init__(self, missing: Missing | None = None):
                 self.missing = missing
 
         class DefaultConsumer:
@@ -330,7 +329,7 @@ class TestCoverageEdges(unittest.TestCase):
         class Missing: ...
 
         class OptionalConsumer:
-            def __init__(self, missing: Optional[Missing]):
+            def __init__(self, missing: Missing | None):
                 self.missing = missing
 
         class RequiredConsumer:
@@ -384,7 +383,7 @@ class TestCoverageEdges(unittest.TestCase):
         class Service:
             @inject
             @abstractmethod
-            def missing(self) -> Optional[str]: ...
+            def missing(self) -> str | None: ...
 
         singleton_registration = injex.Registration(
             kind=injex.RegistrationType.SERVICE,

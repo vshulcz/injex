@@ -6,15 +6,13 @@ import platform
 import statistics
 import sys
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 import tomllib
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-from injex import Container as InjexContainer
 
 import punq
 import wireup
@@ -22,6 +20,8 @@ from dependency_injector import containers, providers
 from dishka import Provider, Scope, from_context, make_container, provide
 from lagom import Container as LagomContainer
 from wireup import injectable
+
+from injex import Container as InjexContainer
 
 
 @dataclass(frozen=True)

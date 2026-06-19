@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+from collections.abc import Callable
+from typing import Any
 
 from .planning import _FactoryPlan, _ServicePlan
 
@@ -35,9 +36,9 @@ class Registration:
     def __init__(
         self,
         kind: str,  # registration type
-        implementation: Optional[Type] = None,
-        factory: Optional[Callable[..., Any]] = None,
-        instance: Optional[Any] = None,
+        implementation: type | None = None,
+        factory: Callable[..., Any] | None = None,
+        instance: Any | None = None,
         lifestyle: str = LifeStyle.TRANSIENT,
     ):
         self.kind = kind
@@ -45,8 +46,8 @@ class Registration:
         self.factory = factory
         self.instance = instance
         self.lifestyle = lifestyle
-        self.plan: Optional[Union[_ServicePlan, _FactoryPlan]] = None
-        self.fast_creator: Optional[Callable[[Any], Any]] = None
+        self.plan: _ServicePlan | _FactoryPlan | None = None
+        self.fast_creator: Callable[[Any], Any] | None = None
         self.fast_creator_version = -1
         self.fast_creator_needs_scope = False
         # Async support: a coroutine-function factory (is_async) or an
@@ -60,14 +61,14 @@ class OverrideContext:
     def __init__(
         self,
         container: Any,
-        key: Tuple[Union[Type, str], Optional[str]],
+        key: tuple[type | str, str | None],
         registration: Registration,
     ):
         self.container = container
         self.key = key
         self.registration = registration
-        self._previous_registrations: Optional[List[Registration]] = None
-        self._previous_singletons: Dict[Any, Any] = {}
+        self._previous_registrations: list[Registration] | None = None
+        self._previous_singletons: dict[Any, Any] = {}
 
     def __enter__(self) -> Any:
         self._previous_registrations = list(

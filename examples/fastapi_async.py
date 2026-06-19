@@ -19,13 +19,12 @@ The pattern:
 - Application services import no FastAPI primitives.
 """
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
 from fastapi import Depends, FastAPI, Request
 
 from injex import AsyncScope, Container
-
 
 # --- application layer (knows nothing about FastAPI or Injex) ---------------
 

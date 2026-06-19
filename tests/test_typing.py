@@ -5,7 +5,7 @@ inferred type drifts. This pins the overloads: ``resolve(Foo)`` returns ``Foo``,
 not ``Any``, so downstream attribute access stays type-checked.
 """
 
-from typing import TYPE_CHECKING, Any, List
+from typing import TYPE_CHECKING, Any
 
 from typing_extensions import assert_type
 
@@ -22,9 +22,9 @@ def test_resolve_overloads_infer_concrete_types() -> None:
     scope = c.create_scope()
 
     assert_type(c.resolve(Foo), Foo)
-    assert_type(c.resolve_all(Foo), List[Foo])
+    assert_type(c.resolve_all(Foo), list[Foo])
     assert_type(scope.resolve(Foo), Foo)
-    assert_type(scope.resolve_all(Foo), List[Foo])
+    assert_type(scope.resolve_all(Foo), list[Foo])
 
 
 if TYPE_CHECKING:

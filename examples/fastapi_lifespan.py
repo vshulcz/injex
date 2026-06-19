@@ -16,9 +16,9 @@ The key boundary is:
 - Application services import no FastAPI primitives.
 """
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import asdict, dataclass
-from typing import AsyncIterator
 from uuid import uuid4
 
 from fastapi import Body, Depends, FastAPI, Request
