@@ -1,3 +1,4 @@
+import asyncio
 import inspect
 import threading
 import types
@@ -134,6 +135,7 @@ class Container:
         "_async_resource_keys",
         "_async_creators",
         "_singleton_lock",
+        "_async_inflight",
     )
 
     def __init__(self) -> None:
@@ -171,6 +173,10 @@ class Container:
             Any,
             tuple[Callable[[Any], Any], bool] | None,
         ] = {}
+        # In-flight singleton builds on the async path, keyed by instance_key, so
+        # concurrent coroutines awaiting the same uncached singleton share one
+        # build instead of each constructing their own.
+        self._async_inflight: dict[Any, asyncio.Future[Any]] = {}
 
     @property
     def _resolving(self) -> set[Any]:
@@ -1279,15 +1285,12 @@ class Container:
         instance_key = (key, registration)
         lifestyle = registration.lifestyle
         if lifestyle == LifeStyle.SINGLETON:
-            if instance_key in self._singletons:
-                return self._singletons[instance_key]
-            instance = await self._acreate_instance_from_registration(
-                registration, scope, resolving, singleton=True
+            existing = self._singletons.get(instance_key, _MISSING)
+            if existing is not _MISSING:
+                return existing
+            return await self._aget_or_create_singleton(
+                instance_key, registration, scope, resolving
             )
-            self._singletons[instance_key] = instance
-            if registration.is_resource:
-                self._async_resource_keys.add(instance_key)
-            return instance
         if lifestyle == LifeStyle.SCOPED:
             if instance_key in scope._scoped_instances:
                 return scope._scoped_instances[instance_key]
@@ -1299,6 +1302,40 @@ class Container:
         return await self._acreate_instance_from_registration(
             registration, scope, resolving, singleton=False
         )
+
+    async def _aget_or_create_singleton(
+        self,
+        instance_key: Any,
+        registration: Registration,
+        scope: AsyncScope,
+        resolving: set[Any],
+    ) -> Any:
+        # asyncio is single-threaded, so reserving the in-flight task before the
+        # first await is atomic: a coroutine that arrives while a build is pending
+        # awaits the same task instead of starting its own.
+        pending = self._async_inflight.get(instance_key)
+        task: asyncio.Future[Any]
+        if pending is None:
+            task = asyncio.ensure_future(
+                self._acreate_instance_from_registration(
+                    registration, scope, resolving, singleton=True
+                )
+            )
+            self._async_inflight[instance_key] = task
+            owner = True
+        else:
+            task = pending
+            owner = False
+        try:
+            instance = await task
+        finally:
+            if owner:
+                self._async_inflight.pop(instance_key, None)
+        if owner:
+            self._singletons[instance_key] = instance
+            if registration.is_resource:
+                self._async_resource_keys.add(instance_key)
+        return instance
 
     async def _acreate_instance_from_registration(
         self,

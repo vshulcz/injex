@@ -15,6 +15,9 @@ and this project uses semantic versioning.
   singleton could each build it, handing different threads different instances.
   Construction is now guarded by a reentrant lock with a lock-free fast path, so
   a singleton is built once; the warm resolve path is unchanged.
+- Async singletons are also built once. Concurrent `aresolve()` calls for the same
+  uncached singleton shared no build, so each constructed its own; they now await
+  a single in-flight build.
 
 ## [1.5.0] - 2026-06-19
 

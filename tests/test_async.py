@@ -247,3 +247,21 @@ def test_assert_valid_accepts_async_factories():
     c.add_scoped_factory(Db, db_session)
     c.add_transient(Service)
     c.assert_valid()  # should not raise: every dependency is registered
+
+
+def test_async_singleton_built_once_under_concurrent_resolve():
+    builds = []
+
+    async def make_pool() -> object:
+        builds.append(1)
+        await asyncio.sleep(0.005)  # suspend mid-build to widen the race window
+        return object()
+
+    async def main():
+        c = Container()
+        c.add_singleton_factory(object, make_pool)
+        results = await asyncio.gather(*[c.aresolve(object) for _ in range(16)])
+        assert sum(builds) == 1, f"built {sum(builds)} times"
+        assert len({id(r) for r in results}) == 1  # all got the same instance
+
+    asyncio.run(main())
