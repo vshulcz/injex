@@ -228,5 +228,6 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 Thanks to [Muhammad Saqib Atif](https://github.com/msaqibatifj),
 [mahek](https://github.com/mahek56),
-[oppnc](https://github.com/oppnc), and
-[YuuGR1337](https://github.com/YuuGR1337) for improving Injex.
+[oppnc](https://github.com/oppnc),
+[YuuGR1337](https://github.com/YuuGR1337), and
+[ankitaparasher04](https://github.com/ankitaparasher04) for improving Injex.
