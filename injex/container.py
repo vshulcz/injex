@@ -133,6 +133,7 @@ class Container:
         "_resolving_local",
         "_async_resource_keys",
         "_async_creators",
+        "_singleton_lock",
     )
 
     def __init__(self) -> None:
@@ -140,6 +141,10 @@ class Container:
             tuple[type | str, str | None], list[Registration]
         ] = {}
         self._singletons: dict[Any, Any] = {}
+        # Guards first-time singleton construction so concurrent resolves build a
+        # singleton once. Reentrant for nested singleton dependencies; only taken
+        # on a cache miss, so the warm path stays lock-free.
+        self._singleton_lock = threading.RLock()
         # Per-thread in-progress set for cycle detection on the interpreted sync
         # path. Thread-local so concurrent resolves (e.g. a threaded web server)
         # never see each other's in-progress types. The async path uses its own
@@ -978,19 +983,24 @@ class Container:
             sentinel = object()
             cached_instance = [sentinel]
             singletons = self._singletons
+            lock = self._singleton_lock
 
             def create_singleton(scope: Scope) -> Any:
                 instance = cached_instance[0]
                 if instance is not sentinel:
                     return instance
-                if instance_key in singletons:
-                    instance = singletons[instance_key]
+                with lock:
+                    instance = cached_instance[0]
+                    if instance is not sentinel:
+                        return instance
+                    if instance_key in singletons:
+                        instance = singletons[instance_key]
+                        cached_instance[0] = instance
+                        return instance
+                    instance = create_raw(scope)
+                    singletons[instance_key] = instance
                     cached_instance[0] = instance
                     return instance
-                instance = create_raw(scope)
-                singletons[instance_key] = instance
-                cached_instance[0] = instance
-                return instance
 
             return create_singleton, needs_scope
 
@@ -1006,6 +1016,22 @@ class Container:
             return create_scoped, True
 
         return None
+
+    def _get_or_create_singleton(
+        self,
+        instance_key: Any,
+        registration: Registration,
+        scope: Scope,
+    ) -> Any:
+        # Double-checked under the lock: a concurrent first resolve must build
+        # the singleton once and every caller must get that one instance.
+        with self._singleton_lock:
+            existing = self._singletons.get(instance_key, _MISSING)
+            if existing is not _MISSING:
+                return existing
+            instance = self._create_instance_from_registration(registration, scope)
+            self._singletons[instance_key] = instance
+            return instance
 
     def _get_instance_from_registration(
         self,
@@ -1024,11 +1050,10 @@ class Container:
         lifestyle = registration.lifestyle
 
         if lifestyle == LifeStyle.SINGLETON:
-            if instance_key in self._singletons:
-                return self._singletons[instance_key]
-            instance = self._create_instance_from_registration(registration, scope)
-            self._singletons[instance_key] = instance
-            return instance
+            existing = self._singletons.get(instance_key, _MISSING)
+            if existing is not _MISSING:
+                return existing
+            return self._get_or_create_singleton(instance_key, registration, scope)
         elif lifestyle == LifeStyle.SCOPED:
             if instance_key in scope._scoped_instances:
                 return scope._scoped_instances[instance_key]
@@ -1113,11 +1138,10 @@ class Container:
             instance_key = (key, registration)
             lifestyle = registration.lifestyle
             if lifestyle == LifeStyle.SINGLETON:
-                if instance_key in self._singletons:
-                    return self._singletons[instance_key]
-                instance = self._create_instance_from_registration(registration, scope)
-                self._singletons[instance_key] = instance
-                return instance
+                existing = self._singletons.get(instance_key, _MISSING)
+                if existing is not _MISSING:
+                    return existing
+                return self._get_or_create_singleton(instance_key, registration, scope)
             if lifestyle == LifeStyle.SCOPED:
                 if instance_key in scope._scoped_instances:
                     return scope._scoped_instances[instance_key]
