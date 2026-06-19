@@ -24,6 +24,9 @@ If `implementation` is omitted, Injex uses `interface` as the concrete class.
 
 - `resolve(interface, name=None)` returns one service instance.
 - `resolve_all(interface, name=None)` returns all matching registrations.
+- `call(func, **overrides)` calls `func`, injecting its annotated parameters;
+  values in `overrides` are passed as-is (a request, parsed args, a message).
+  `acall(...)` is the async counterpart.
 - `create_scope()` creates a scope for scoped services. Usable as a context
   manager (`with container.create_scope() as scope:`).
 

@@ -11,6 +11,12 @@ and this project uses semantic versioning.
 
 ### Added
 
+- `container.call(func, **overrides)` (and async `acall`) invoke a function with
+  its annotated parameters injected from the container, while `overrides` supplies
+  per-call values (a request, parsed args, a message). `acall` awaits async
+  dependencies and coroutine functions and finalizes async resources opened for
+  the call. This is the building block for wiring handlers, CLI commands, and
+  task consumers without turning them into classes.
 - Inject a named registration into a constructor with
   `Annotated[T, Named("primary")]`. Previously a named registration could only be
   reached through `resolve(T, name="primary")`; now it can be a constructor

@@ -87,6 +87,25 @@ singleton.
 container.add_instance(Settings, load_settings())
 ```
 
+## Calling functions
+
+`resolve` builds objects; `call` invokes a function, filling its annotated
+parameters from the container. Pass the rest yourself — a request, parsed CLI
+args, a queue message. This is how you keep handlers free of wiring without
+turning them into classes.
+
+```python
+def register_user(email: str, use_case: RegisterUser) -> int:
+    return use_case.execute(email)
+
+
+container.call(register_user, email="ada@example.com")  # use_case is injected
+```
+
+`acall` is the async counterpart: it awaits async dependencies, awaits the
+function if it's a coroutine, and finalizes any async resources opened for the
+call when it returns.
+
 ## Scopes
 
 A scope is a boundary that scoped services live inside of — typically one web

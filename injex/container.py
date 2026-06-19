@@ -390,6 +390,29 @@ class Container:
         resources use ``async with container.ascope()`` instead."""
         return Scope(self)
 
+    def call(self, func: Callable[..., T], /, **overrides: Any) -> T:
+        """Call ``func``, injecting its annotated parameters from the container.
+
+        Parameters passed in ``overrides`` are used as-is instead of being
+        resolved, so a handler can receive both container services and
+        per-call values (a request, parsed args, a message)::
+
+            container.call(handle_request, request=req)
+        """
+        plan = _get_callable_plan(func)
+        scope = self.create_scope()
+        kwargs: dict[str, Any] = dict(overrides)
+        for dependency_plan in plan.dependencies:
+            if dependency_plan.name in overrides:
+                continue
+            if dependency_plan.inject_container:
+                kwargs[dependency_plan.name] = self
+            else:
+                kwargs[dependency_plan.name] = self._resolve_dependency_plan(
+                    dependency_plan, scope, func
+                )
+        return func(**kwargs)
+
     def validate(self) -> list[ValidationError]:
         """Validate registered dependency graphs without creating service instances."""
         errors: list[ValidationError] = []
@@ -1138,7 +1161,7 @@ class Container:
         return detail
 
     def _resolve_dependency_plan(
-        self, dependency_plan: _DependencyPlan, scope: Scope, owner: type
+        self, dependency_plan: _DependencyPlan, scope: Scope, owner: Any
     ) -> Any:
         if dependency_plan.inject_container:
             return self
@@ -1194,7 +1217,7 @@ class Container:
             raise AsyncResolutionRequiredException(factory)
         plan = self._get_factory_plan(registration)
         args = [
-            self._resolve_dependency_plan(dependency_plan, scope, factory)  # type: ignore[arg-type]
+            self._resolve_dependency_plan(dependency_plan, scope, factory)
             for dependency_plan in plan.dependencies
         ]
         return factory(*args)
@@ -1205,6 +1228,27 @@ class Container:
         """Open an async resolution scope. Use as ``async with``; async resources
         resolved inside are finalized when the block exits."""
         return AsyncScope(self)
+
+    async def acall(self, func: Callable[..., Any], /, **overrides: Any) -> Any:
+        """Async counterpart of :meth:`call`. Awaits async dependencies, awaits
+        ``func`` if it is a coroutine function, and finalizes any async resources
+        opened for the call when it returns."""
+        plan = _get_callable_plan(func)
+        async with self.ascope() as scope:
+            kwargs: dict[str, Any] = dict(overrides)
+            for dependency_plan in plan.dependencies:
+                if dependency_plan.name in overrides:
+                    continue
+                if dependency_plan.inject_container:
+                    kwargs[dependency_plan.name] = self
+                else:
+                    kwargs[dependency_plan.name] = await self._aresolve_dependency_plan(
+                        dependency_plan, scope, func, set()
+                    )
+            result = func(**kwargs)
+            if inspect.isawaitable(result):
+                result = await result
+            return result
 
     @overload
     async def aresolve(self, interface: type[T], name: str | None = None) -> T: ...
