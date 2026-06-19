@@ -6,15 +6,18 @@ class DIException(Exception):
 
 
 class ServiceNotRegisteredException(DIException):
-    def __init__(self, interface_description: str):
-        super().__init__(
-            f"Service for interface '{interface_description}' is not registered."
-        )
+    def __init__(
+        self, interface_description: str, required_by: str | None = None
+    ) -> None:
+        message = f"Service for interface '{interface_description}' is not registered."
+        if required_by is not None:
+            message += f" It is required by {required_by}."
+        super().__init__(message)
 
 
 class CyclicDependencyException(DIException):
     def __init__(self, cls: type):
-        super().__init__(f"Cyclic dependency detected: {cls}.")
+        super().__init__(f"Cyclic dependency detected: {_describe_service(cls)}.")
 
 
 class MissingTypeAnnotationException(DIException):

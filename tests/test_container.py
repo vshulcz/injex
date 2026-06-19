@@ -424,7 +424,9 @@ class TestContainer(unittest.TestCase):
 
         with self.assertRaises(ServiceNotRegisteredException) as context:
             self.container.resolve(Consumer)
-        self.assertIn("Service for interface '<class", str(context.exception))
+        message = str(context.exception)
+        self.assertIn("DependencyUnregistered", message)
+        self.assertIn("Consumer.dependency", message)  # names the requiring site
 
     def test_cyclic_dependency_with_property_injection(self):
         self.container.register(ServiceA_prop_inj)

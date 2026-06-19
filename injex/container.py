@@ -393,9 +393,16 @@ class Container:
     def validate(self) -> list[ValidationError]:
         """Validate registered dependency graphs without creating service instances."""
         errors: list[ValidationError] = []
+        seen: set[str] = set()
         for key, registrations in self._registrations.items():
             for registration in registrations:
-                errors.extend(self._validate_registration(key, registration, []))
+                for error in self._validate_registration(key, registration, []):
+                    # A shared dependency is reached from several roots; report
+                    # each distinct problem once.
+                    marker = str(error)
+                    if marker not in seen:
+                        seen.add(marker)
+                        errors.append(error)
         return errors
 
     def assert_valid(self) -> None:
@@ -421,7 +428,7 @@ class Container:
         key = (interface, name)
         registrations = self._registrations.get(key)
         if not registrations:
-            interface_name = f"{interface}"
+            interface_name = _describe_service(interface)
             if name is not None:
                 interface_name += f" with name '{name}'"
             raise ServiceNotRegisteredException(interface_name)
@@ -1118,6 +1125,18 @@ class Container:
         registration.plan = plan
         return plan
 
+    @staticmethod
+    def _describe_owner(owner: Any, name: str) -> str:
+        return f"{getattr(owner, '__name__', owner)}.{name}"
+
+    @staticmethod
+    def _describe_dependency(dependency_plan: _DependencyPlan) -> str:
+        detail = _describe_service(dependency_plan.dependency_type)
+        key = dependency_plan.dependency_key
+        if key is not None and key[1] is not None:
+            detail += f" named '{key[1]}'"
+        return detail
+
     def _resolve_dependency_plan(
         self, dependency_plan: _DependencyPlan, scope: Scope, owner: type
     ) -> Any:
@@ -1160,7 +1179,10 @@ class Container:
             return dependency_plan.default
         if dependency_plan.is_optional:
             return None
-        raise ServiceNotRegisteredException(f"{dependency_type}")
+        raise ServiceNotRegisteredException(
+            self._describe_dependency(dependency_plan),
+            required_by=self._describe_owner(owner, dependency_plan.name),
+        )
 
     def _invoke_factory_registration(
         self, registration: Registration, scope: Scope
@@ -1264,7 +1286,7 @@ class Container:
         key = (interface, name)
         registrations = self._registrations.get(key)
         if not registrations:
-            interface_name = f"{interface}"
+            interface_name = _describe_service(interface)
             if name is not None:
                 interface_name += f" with name '{name}'"
             raise ServiceNotRegisteredException(interface_name)
@@ -1444,7 +1466,10 @@ class Container:
             return dependency_plan.default
         if dependency_plan.is_optional:
             return None
-        raise ServiceNotRegisteredException(f"{dependency_type}")
+        raise ServiceNotRegisteredException(
+            self._describe_dependency(dependency_plan),
+            required_by=self._describe_owner(owner, dependency_plan.name),
+        )
 
     async def _ainject_property_dependencies(
         self,
