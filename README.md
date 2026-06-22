@@ -15,7 +15,7 @@ You wire one service graph at startup, validate it in a single call, then reuse 
 from FastAPI, Typer, workers, scripts, and tests. Application classes stay plain:
 normal constructors, normal type hints, no decorators.
 
-![Injex validates the dependency graph before startup](https://raw.githubusercontent.com/vshulcz/injex/main/site/assets/validate-demo.png)
+![Injex validates the dependency graph before startup](https://raw.githubusercontent.com/vshulcz/injex/main/site/assets/validate-demo.gif)
 
 ```bash
 pip install injex
