@@ -311,6 +311,12 @@ def import_user(job_id: str, job: ImportUserJob = Inject()):
 @ainject(container)
 async def on_message(message, users: UserService = Inject()):
     await users.register(message.from_user.id)
+
+
+@broker.subscriber("orders")  # FastStream / taskiq
+@ainject(container)
+async def on_order(order: dict, orders: OrderService = Inject()):
+    await orders.process(order)
 ```
 
 Each call opens its own scope, so a scoped session or unit of work is finalized

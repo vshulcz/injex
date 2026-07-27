@@ -146,9 +146,10 @@ def register(email: str, use_case: RegisterUser = Inject()):
 ```
 
 **More frameworks** — `injex.ext` ships a one-line, per-request scope for Django,
-Starlette, Litestar, Flask, and aiohttp, plus `inject` / `ainject` decorators for
-task and handler runners (Celery, arq, RQ, dramatiq, aiogram). The request is put
-in the scope's context, so a service can take it directly:
+Starlette, Litestar, Flask, aiohttp, Sanic, and Quart, plus `inject` / `ainject`
+decorators for task and handler runners (Celery, arq, taskiq, RQ, dramatiq,
+aiogram, FastStream). The request is put in the scope's context, so a service can
+take it directly:
 
 ```python
 container.add_context(Request)  # provided per scope, not constructed
