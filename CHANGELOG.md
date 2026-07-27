@@ -7,6 +7,8 @@ and this project uses semantic versioning.
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-07-28
+
 ### Added
 
 - Sanic (`injex.ext.sanic`, `setup_injex(app, container)`, scope on
