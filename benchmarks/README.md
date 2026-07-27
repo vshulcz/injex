@@ -45,6 +45,17 @@ Environment:
 | lagom | `9.487 µs/op` |
 | punq | `56.982 µs/op` |
 
+## Per-request scope benchmark
+
+`resolve_scoped.py` measures the request shape: open a scope, resolve a use case
+whose graph has a request-scoped session, close the scope. Injex vs hand-written
+wiring only, since scope semantics differ too much between libraries for a fair
+cross-library comparison.
+
+```bash
+uv run python benchmarks/resolve_scoped.py
+```
+
 ## Async benchmark
 
 `resolve_async.py` measures the same graph through each library's async API, for
