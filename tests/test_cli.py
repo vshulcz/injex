@@ -28,6 +28,12 @@ def test_check_reports_bad_target_spec():
     assert "module:attribute" in str(excinfo.value)
 
 
+def test_check_reports_import_failure():
+    with pytest.raises(SystemExit) as excinfo:
+        main(["check", "tests._no_such_module_here:container"])
+    assert "could not import" in str(excinfo.value)
+
+
 def test_check_reports_missing_attribute():
     with pytest.raises(SystemExit) as excinfo:
         main(["check", "tests._cli_app:nope"])

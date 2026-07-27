@@ -61,6 +61,25 @@ def test_instance_registration_is_labelled():
     assert "Config [instance]" in c.graph()
 
 
+def test_graph_includes_factory_dependencies():
+    class Settings: ...
+
+    class Client:
+        def __init__(self, settings: Settings) -> None:
+            self.settings = settings
+
+    def make_client(settings: Settings) -> Client:
+        return Client(settings)
+
+    c = Container()
+    c.add_singleton(Settings)
+    c.add_singleton_factory(Client, make_client)
+
+    text = c.graph()
+    assert "Client [singleton]" in text
+    assert "-> Settings" in text
+
+
 def test_unknown_format_raises():
     with pytest.raises(ValueError, match="unknown graph format"):
         _container().graph("svg")

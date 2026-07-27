@@ -25,7 +25,7 @@ def _load_container(spec: str) -> Container:
     # Make the current directory importable so a project's own module resolves
     # whether invoked as `python -m injex` or via the `injex` console script.
     cwd = os.getcwd()
-    if cwd not in sys.path:
+    if cwd not in sys.path:  # pragma: no cover - depends on how python was invoked
         sys.path.insert(0, cwd)
 
     try:
@@ -79,5 +79,5 @@ def main(argv: list[str] | None = None) -> int:
     return _check(args.target)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(main())
