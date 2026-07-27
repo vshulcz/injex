@@ -7,6 +7,16 @@ and this project uses semantic versioning.
 
 ## [Unreleased]
 
+### Added
+
+- Sanic (`injex.ext.sanic`, `setup_injex(app, container)`, scope on
+  `request.ctx.injex`) and Quart (`injex.ext.quart`, `setup_injex(app, container)`,
+  scope on `quart.g.injex`) integrations, each with the request in the scope
+  context. Optional extras `injex[sanic]` / `injex[quart]`.
+- The `injex.ext.tasks.ainject` decorator is verified to work with FastStream
+  subscribers and taskiq tasks (a scope per message/task, injected services),
+  alongside the aiogram/arq/RQ/dramatiq usage it already covered.
+
 ## [1.8.1] - 2026-07-28
 
 ### Fixed

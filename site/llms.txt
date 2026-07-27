@@ -32,8 +32,9 @@ Key facts:
 - Context data: `add_context(T)` + `create_scope(context={T: value})` injects
   per-scope values (the request, current user, tenant id) without globals
 - Integrations (`injex.ext.*`): per-request scope for FastAPI, Django, Starlette,
-  Litestar, Flask, aiohttp; `inject`/`ainject` decorators for task/handler runners
-  (Celery, arq, RQ, dramatiq, aiogram); `Inject`+`wire` for Typer/Click CLIs
+  Litestar, Flask, aiohttp, Sanic, Quart; `inject`/`ainject` decorators for
+  task/handler runners (Celery, arq, taskiq, RQ, dramatiq, aiogram, FastStream);
+  `Inject`+`wire` for Typer/Click CLIs
 - Performance snapshot: `0.333 µs/op` median resolve time on the project small
   service-graph benchmark
 
