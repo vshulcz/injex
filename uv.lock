@@ -262,7 +262,7 @@ wheels = [
 
 [[package]]
 name = "injex"
-version = "1.7.0"
+version = "1.7.1"
 source = { editable = "." }
 
 [package.optional-dependencies]

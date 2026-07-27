@@ -7,6 +7,16 @@ and this project uses semantic versioning.
 
 ## [Unreleased]
 
+## [1.7.1] - 2026-07-27
+
+### Changed
+
+- Faster request scopes, no API change. A scope that opens no resources no longer
+  allocates an `ExitStack`, and `scope.resolve()` runs a compiled creator for
+  scoped graphs instead of the interpreted walk. Open + resolve + close on a
+  request scope is down roughly 40% (~0.87 to ~0.5 µs/op on the project
+  benchmark); top-level `resolve()` is unchanged.
+
 ## [1.7.0] - 2026-07-27
 
 ### Added
