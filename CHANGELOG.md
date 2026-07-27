@@ -7,6 +7,8 @@ and this project uses semantic versioning.
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-07-27
+
 ### Added
 
 - Context data. `add_context(T)` declares a type supplied per scope via
