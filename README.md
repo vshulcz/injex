@@ -71,7 +71,25 @@ container.assert_valid()            # or raise with all of them at once
 ```
 
 That makes it safe to run as a startup guard even when real constructors open
-sockets or files.
+sockets or files. Errors name the full path to the break and suggest a near
+match:
+
+```
+Repo: Dependency 'session' is not registered: Session.
+Resolution path: Handler -> UseCase -> Repo -> session. Did you mean Sesion?
+```
+
+Run the same check in CI, no test harness needed:
+
+```bash
+python -m injex check myapp.bootstrap:container   # exits non-zero on any error
+```
+
+And print the wiring to read or diff it (`text`, `mermaid`, or `dot`, zero deps):
+
+```python
+print(container.graph("mermaid"))
+```
 
 ## Lifetimes, overrides, scopes
 
@@ -261,7 +279,8 @@ with the modern full-featured ones — **dishka** and **Wireup** — see
 | `call(fn, **overrides)` | Invoke a function with its dependencies injected. |
 | `create_scope()` | Start a request/job lifetime (`with` finalizes scoped resources). |
 | `override(T, ...)` | Temporarily replace a dependency in tests. |
-| `validate()` / `assert_valid()` | Check wiring before startup. |
+| `validate()` / `assert_valid()` | Check wiring before startup (also `python -m injex check module:container` for CI). |
+| `graph(fmt="text")` | Render the wiring as text, Mermaid, or DOT. |
 | `aresolve(T)` / `ascope()` / `acall(fn)` / `aclose()` | Async equivalents (await factories, async resources). |
 | `close()` | Finalize singleton resources at shutdown. |
 

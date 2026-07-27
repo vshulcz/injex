@@ -62,7 +62,8 @@ include = ["injex*"]
 
 [tool.codespell]
 skip = "./.git,./.venv,./dist,./uv.lock,./site/assets,*.svg,*.png,*.ico"
-ignore-words-list = "injex"
+# "sesion"/"databse" appear only as intentional typo examples for the near-name hint.
+ignore-words-list = "injex,sesion,databse"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
