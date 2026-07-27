@@ -4,6 +4,73 @@ These recipes show where to keep container calls in common application shapes.
 They use small examples on purpose: the important part is the boundary, not the
 domain model.
 
+## One container, many entry points
+
+The point of a container is that the *same* validated graph backs every way the
+app runs — HTTP, a worker, a CLI, tests — so wiring never drifts between them.
+Build it once, validate it once, resolve from it everywhere.
+
+```python
+# bootstrap.py — the one composition root
+from injex import Container
+
+
+def build_container() -> Container:
+    container = Container()
+    container.add_singleton(Settings)
+    container.add_singleton(Database)
+    container.add_scoped(UnitOfWork)
+    container.add_transient(RegisterUser)
+    container.assert_valid()  # fail fast, in every entry point and in CI
+    return container
+```
+
+```python
+# api.py
+from injex.ext.fastapi import Provide, setup_injex
+
+from bootstrap import build_container
+
+app = FastAPI()
+setup_injex(app, build_container())
+
+
+@app.post("/users")
+async def create(use_case: RegisterUser = Provide(RegisterUser)):
+    return use_case.execute(...)
+```
+
+```python
+# worker.py
+from bootstrap import build_container
+
+container = build_container()
+
+
+def handle_job(payload) -> None:
+    with container.create_scope() as scope:  # one scope per job
+        scope.resolve(RegisterUser).execute(payload)
+```
+
+```python
+# cli.py
+from injex.ext.cli import Inject, wire
+
+from bootstrap import build_container
+
+
+@app.command()
+@wire(build_container())
+def register(email: str, use_case: RegisterUser = Inject()):
+    use_case.execute(email)
+```
+
+Each entry point opens its own scope — a request, a job, a command — over one
+shared graph. `python -m injex check bootstrap:build_container` validates that
+graph in CI, so a dependency added for the API but forgotten in the worker fails
+the build instead of a 3 a.m. page. The sections below show each entry point in
+more detail.
+
 ## FastAPI composition root
 
 Keep the container at application startup. Request handlers should receive use
