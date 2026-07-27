@@ -1,4 +1,5 @@
 import asyncio
+import difflib
 import inspect
 import threading
 from collections.abc import Callable
@@ -481,13 +482,14 @@ class Container:
     def validate(self) -> list[ValidationError]:
         """Validate registered dependency graphs without creating service instances."""
         errors: list[ValidationError] = []
-        seen: set[str] = set()
+        seen: set[tuple[Any, str | None, str]] = set()
         for key, registrations in self._registrations.items():
             for registration in registrations:
                 for error in self._validate_registration(key, registration, []):
                     # A shared dependency is reached from several roots; report
-                    # each distinct problem once.
-                    marker = str(error)
+                    # each distinct problem once (ignoring the path detail, so
+                    # the same missing binding isn't listed once per route).
+                    marker = (error.service, error.name, error.message)
                     if marker not in seen:
                         seen.add(marker)
                         errors.append(error)
@@ -673,11 +675,14 @@ class Container:
             described = _describe_service(dependency_type)
             if dep_name is not None:
                 described += f" named '{dep_name}'"
+            trail = self._describe_path(path, dependency_name)
+            hint = self._nearest_registration_hint(dependency_type)
             return [
                 ValidationError(
                     source_key[0],
                     source_key[1],
                     f"Dependency '{dependency_name}' is not registered: {described}.",
+                    detail=f"{trail}{hint}",
                 )
             ]
 
@@ -697,6 +702,27 @@ class Container:
                 ):
                     return (registered_service, None)
         return (dependency_type, None)
+
+    @staticmethod
+    def _describe_path(path: list[tuple[type | str, str | None]], leaf: str) -> str:
+        """Render the chain of owners that leads to a missing dependency, so the
+        error points at where in the graph the break is (Handler -> Repo -> ...)."""
+        if not path:
+            return ""
+        chain = " -> ".join(_describe_service(item[0]) for item in path)
+        return f" Resolution path: {chain} -> {leaf}."
+
+    def _nearest_registration_hint(self, dependency_type: Any) -> str:
+        """Suggest the closest registered service name for a likely typo/misname."""
+        wanted = _describe_service(dependency_type)
+        registered = {
+            _describe_service(service)
+            for service, name in self._registrations
+            if name is None
+        }
+        registered.discard(wanted)
+        close = difflib.get_close_matches(wanted, list(registered), n=1, cutoff=0.6)
+        return f" Did you mean {close[0]}?" if close else ""
 
     def _get_fast_creator(
         self,

@@ -63,12 +63,16 @@ class ValidationError:
     service: type | str
     name: str | None
     message: str
+    # Extra context (resolution path, suggestions) rendered after the message
+    # but excluded from de-duplication, so the same problem reached by several
+    # paths is reported once.
+    detail: str = ""
 
     def __str__(self) -> str:
         service = _describe_service(self.service)
         if self.name is not None:
             service += f" named '{self.name}'"
-        return f"{service}: {self.message}"
+        return f"{service}: {self.message}{self.detail}"
 
 
 class ContainerValidationException(DIException):
