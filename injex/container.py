@@ -106,6 +106,14 @@ class Scope:
                 creator = container._prime_noscope_creator(interface)
             if creator is not None:
                 return creator(None)
+            # Graph needs a scope: run the compiled scope-aware creator with this
+            # scope (scoped instances cache in it) instead of the interpreted walk.
+            try:
+                scope_creator = container._scope_creators[interface]
+            except KeyError:
+                scope_creator = container._prime_scope_creator(interface)
+            if scope_creator is not None:
+                return scope_creator(self)
         return container._resolve_one(interface, self, name)
 
     @overload
@@ -173,6 +181,7 @@ class Container:
         "_noscope_creators",
         "_registrations",
         "_resolving_local",
+        "_scope_creators",
         "_singleton_lock",
         "_singletons",
         "_sync_resource_keys",
@@ -206,6 +215,9 @@ class Container:
         # registration attribute reads. Value is None when the interface is not
         # eligible for the no-scope fast path. Cleared on every invalidation.
         self._noscope_creators: dict[Any, Callable[[Any], Any] | None] = {}
+        # Compiled scope-aware creators for graphs that need a scope (scoped
+        # services): scope.resolve() runs these instead of the interpreted walk.
+        self._scope_creators: dict[Any, Callable[[Any], Any] | None] = {}
         # Compiled async creators per (interface, name): an `async def` that
         # inlines the synchronous parts of the graph and awaits only genuine
         # async nodes, plus a flag for whether it needs an async scope.
@@ -242,6 +254,7 @@ class Container:
     def _invalidate_fast_creators(self) -> None:
         self._version += 1
         self._noscope_creators.clear()
+        self._scope_creators.clear()
         self._async_creators.clear()
 
     def register(
@@ -413,6 +426,23 @@ class Container:
                 if registration.lifestyle == LifeStyle.SINGLETON:
                     creator = _make_constant_creator(creator(None))
         self._noscope_creators[interface] = creator
+        return creator
+
+    def _prime_scope_creator(
+        self, interface: type | str
+    ) -> Callable[[Any], Any] | None:
+        """Compiled creator used by scope.resolve() for graphs that need a scope
+        (scoped services). It is the same flat/fast creator the container builds,
+        called with the live scope so scoped instances cache in it — replacing
+        the interpreted walk for the common request pattern."""
+        creator: Callable[[Any], Any] | None = None
+        registrations = self._registrations.get((interface, None))
+        if registrations:
+            registration = registrations[0]
+            if registration.fast_creator_version != self._version:
+                self._get_fast_creator(registration, (interface, None))
+            creator = registration.fast_creator
+        self._scope_creators[interface] = creator
         return creator
 
     def _resolve_slow(self, interface: type | str, name: str | None) -> Any:
