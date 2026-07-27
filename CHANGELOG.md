@@ -7,6 +7,14 @@ and this project uses semantic versioning.
 
 ## [Unreleased]
 
+## [1.8.1] - 2026-07-28
+
+### Fixed
+
+- `inject` / `ainject` (`injex.ext.tasks`) and `wire` (`injex.ext.cli`) now raise
+  a clear error when an `Inject()` parameter has no type annotation, instead of
+  failing later with an opaque "'_empty' is not registered" message.
+
 ## [1.8.0] - 2026-07-27
 
 ### Added

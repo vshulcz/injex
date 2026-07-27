@@ -38,6 +38,12 @@ def _split_parameters(
     signature = inspect.signature(func)
     injected = [p for p in signature.parameters.values() if p.default is _INJECT]
     visible = [p for p in signature.parameters.values() if p.default is not _INJECT]
+    for param in injected:
+        if param.annotation is inspect.Parameter.empty:
+            raise TypeError(
+                f"Parameter '{param.name}' of {func.__name__}() is marked Inject() "
+                "but has no type annotation; add one so injex knows what to resolve."
+            )
     return signature, injected, visible
 
 
