@@ -34,3 +34,9 @@ if TYPE_CHECKING:
         scope = c.create_scope()
         assert_type(c.resolve("Foo"), Any)
         assert_type(scope.resolve("Foo"), Any)
+
+    # The async overloads recover the same concrete types.
+    async def _aresolve_infers_concrete_types(c: Container) -> None:
+        assert_type(await c.aresolve(Foo), Foo)
+        async with c.ascope() as scope:
+            assert_type(await scope.aresolve(Foo), Foo)
