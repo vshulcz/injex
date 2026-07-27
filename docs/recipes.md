@@ -192,6 +192,42 @@ route that asks for `UserRepository` (or the `Session` directly) gets one bound
 to that request and released when it returns. Use `add_scoped_factory` with a
 plain generator when the driver is synchronous — teardown works the same.
 
+## Request data in the graph
+
+Sometimes a factory needs the request itself: the authenticated user, a tenant
+id, a trace id. Declare that type as context and pass it when you open the scope.
+Injex injects it like any other dependency, and `validate()` still counts it as
+satisfied — no globals, no `contextvars`.
+
+```python
+from injex import Container
+
+
+class Request:
+    def __init__(self, user_id: str):
+        self.user_id = user_id
+
+
+class AuditLog:
+    def __init__(self, request: Request):  # needs the current request
+        self.request = request
+
+
+container = Container()
+container.add_context(Request)  # supplied per scope, not constructed
+container.add_transient(AuditLog)
+container.assert_valid()  # Request counts as satisfied
+
+
+def handle(request: Request) -> None:
+    with container.create_scope(context={Request: request}) as scope:
+        scope.resolve(AuditLog)  # gets this request
+```
+
+Resolving a context-dependent service without providing the value raises
+`ContextValueMissingException`, so a forgotten `context=` fails loudly instead of
+silently. Async is the same with `ascope(context={...})`.
+
 ## Worker job scope
 
 Workers usually have two lifetimes: process lifetime and job lifetime. Keep

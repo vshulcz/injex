@@ -7,6 +7,14 @@ and this project uses semantic versioning.
 
 ## [Unreleased]
 
+### Added
+
+- Context data. `add_context(T)` declares a type supplied per scope via
+  `create_scope(context={T: value})` / `ascope(context=...)`, so the request, the
+  current user, a tenant id, and similar per-request values can be injected into
+  factories without globals or `contextvars`. `validate()` treats a context type
+  as satisfied; resolving one without a value raises `ContextValueMissingException`.
+
 ## [1.7.1] - 2026-07-27
 
 ### Changed
