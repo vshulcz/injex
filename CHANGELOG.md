@@ -7,6 +7,8 @@ and this project uses semantic versioning.
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-07-27
+
 ### Added
 
 - `python -m injex check module:container` — validate a container's graph in CI
