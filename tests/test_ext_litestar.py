@@ -1,6 +1,8 @@
 """Litestar integration: per-request scope on request.state.injex, the request
 in the scope context, and scoped resources finalized after the response."""
 
+from typing import Any
+
 import pytest
 
 pytest.importorskip("litestar")
@@ -13,7 +15,7 @@ from injex import Container
 from injex.ext.litestar import InjexMiddleware
 
 
-def _client(container: Container, handlers: list) -> TestClient:
+def _client(container: Container, handlers: list[Any]) -> TestClient[Any]:
     app = Litestar(
         route_handlers=handlers,
         middleware=[DefineMiddleware(InjexMiddleware, container=container)],
@@ -32,7 +34,8 @@ def test_middleware_resolves_and_injects_the_request():
 
     @get("/me")
     async def me(request: Request) -> str:
-        return (await request.state.injex.aresolve(CurrentUser)).user
+        user: CurrentUser = await request.state.injex.aresolve(CurrentUser)
+        return user.user
 
     with _client(container, [me]) as client:
         assert client.get("/me", headers={"x-user": "ada"}).text == "ada"
