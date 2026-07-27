@@ -68,6 +68,63 @@ container)` plus `use_case: RegisterUser = Provide(RegisterUser)`. See
 See also: [`examples/fastapi_app.py`](../examples/fastapi_app.py) and
 [`examples/fastapi_ext.py`](../examples/fastapi_ext.py).
 
+## One database session per request
+
+Register the session as a scoped async-generator factory. Injex opens it the
+first time it is resolved in a scope, hands the *same* session to everything in
+that request, and finalizes it (LIFO, via the standard library's
+`AsyncExitStack`) when the scope exits. No middleware, no contextvars.
+
+```python
+from collections.abc import AsyncIterator
+
+from injex import Container
+
+
+class Settings:
+    dsn = "postgresql://localhost/app"
+
+
+class Session:
+    def __init__(self, dsn: str):
+        self.dsn = dsn
+
+    async def close(self) -> None: ...
+
+
+class UserRepository:
+    def __init__(self, session: Session):  # receives the request's session
+        self.session = session
+
+
+async def open_session(settings: Settings) -> AsyncIterator[Session]:
+    session = Session(settings.dsn)
+    try:
+        yield session
+    finally:
+        await session.close()  # runs when the request scope exits
+
+
+container = Container()
+container.add_instance(Settings, Settings())
+container.add_scoped_factory(Session, open_session)
+container.add_transient(UserRepository)
+container.assert_valid()
+
+
+async def handle_request() -> None:
+    async with container.ascope() as scope:
+        repo_a = await scope.aresolve(UserRepository)
+        repo_b = await scope.aresolve(UserRepository)
+        assert repo_a.session is repo_b.session  # one session for the request
+    # session.close() has run here; the next scope opens a fresh session
+```
+
+Under FastAPI the request scope is opened for you by `injex.ext.fastapi`, so a
+route that asks for `UserRepository` (or the `Session` directly) gets one bound
+to that request and released when it returns. Use `add_scoped_factory` with a
+plain generator when the driver is synchronous — teardown works the same.
+
 ## Worker job scope
 
 Workers usually have two lifetimes: process lifetime and job lifetime. Keep
