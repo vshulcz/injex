@@ -19,6 +19,10 @@ and this project uses semantic versioning.
 - Django integration (`injex.ext.django`, optional extra `injex[django]`).
   `InjexMiddleware` opens a scope per request on `request.injex` and places the
   `HttpRequest` in its context.
+- Starlette (`injex.ext.starlette`) and Litestar (`injex.ext.litestar`)
+  integrations: an `InjexMiddleware` that opens a scope per request on
+  `request.state.injex` with the request in its context. Optional extras
+  `injex[starlette]` / `injex[litestar]`.
 - `injex.ext.tasks.inject` / `ainject`: scope-per-call injection for task and
   handler functions (Celery, arq, RQ, dramatiq, aiogram, …). Framework-agnostic
   and dependency-free.

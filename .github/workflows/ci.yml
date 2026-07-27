@@ -143,13 +143,13 @@ jobs:
 
       - name: Install dependencies
         # typing-extensions>=4.13 keeps pydantic-core (via fastapi) working when
-        # django's resolution would otherwise pull an older one.
+        # another package's resolution would otherwise pull an older one.
         run: |
           uv sync
-          uv pip install fastapi httpx "django>=4.2" "typing-extensions>=4.13"
+          uv pip install fastapi httpx "django>=4.2" starlette litestar "typing-extensions>=4.13"
 
       - name: Run framework integration tests
-        run: uv run --no-sync pytest tests/test_ext_fastapi.py tests/test_ext_django.py --no-cov
+        run: uv run --no-sync pytest tests/test_ext_fastapi.py tests/test_ext_django.py tests/test_ext_starlette.py tests/test_ext_litestar.py --no-cov
 
   links:
     name: Link Check

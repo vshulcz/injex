@@ -30,6 +30,8 @@ dependencies = []
 [project.optional-dependencies]
 fastapi = ["fastapi>=0.100"]
 django = ["django>=4.2"]
+starlette = ["starlette>=0.30"]
+litestar = ["litestar>=2.0"]
 
 [project.scripts]
 injex = "injex.cli:main"
