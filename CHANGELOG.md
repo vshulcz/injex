@@ -7,6 +7,29 @@ and this project uses semantic versioning.
 
 ## [Unreleased]
 
+### Added
+
+- `python -m injex check module:container` — validate a container's graph in CI
+  without constructing anything; exits non-zero on any error. Also installed as
+  the `injex` console script. Accepts a `Container` or a zero-arg factory.
+- `container.graph(fmt="text")` renders the dependency graph as text, Mermaid, or
+  DOT (zero dependencies, no rendering), marking unregistered dependencies.
+- `injex.testing.overrides(container, {Interface: instance, ...})` applies several
+  test overrides at once and restores them on exit.
+
+### Changed
+
+- Validation errors now show the full resolution path (`Handler -> UseCase ->
+  Repo -> dep`) and suggest the nearest registered name on a likely typo. The
+  same missing binding reached by several routes is reported once.
+
+### Fixed
+
+- Under `from __future__ import annotations`, a single unresolvable annotation no
+  longer makes `validate()` and `resolve()` disagree: resolve() now matches
+  string annotations by registered name the same way validate() does, so a
+  validated graph resolves.
+
 ## [1.6.0] - 2026-06-19
 
 ### Added

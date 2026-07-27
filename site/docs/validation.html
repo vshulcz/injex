@@ -77,6 +77,23 @@ if errors:
           service constructors still happen when the service is resolved.
         </p>
 
+        <h2>Check it in CI</h2>
+        <p>
+          Run the same check as a build step — no test harness, exits non-zero on
+          any error:
+        </p>
+        <pre><code>python -m injex check myapp.bootstrap:container</code></pre>
+        <p>A missing binding names the full path to the break and suggests a near match:</p>
+        <pre><code>Repo: Dependency 'session' is not registered: Session.
+Resolution path: Handler -&gt; UseCase -&gt; Repo -&gt; session. Did you mean Sesion?</code></pre>
+
+        <h2>See the graph</h2>
+        <p>
+          Render the wiring as text, Mermaid, or DOT to read or diff it — zero
+          dependencies, nothing constructed:
+        </p>
+        <pre><code>print(container.graph("mermaid"))</code></pre>
+
         <nav class="pager" aria-label="Next pages">
           <a href="./getting-started.html"><small>Previous</small>Getting started</a>
           <a href="./comparison.html"><small>Next</small>Comparison</a>

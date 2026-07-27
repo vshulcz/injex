@@ -1,4 +1,5 @@
 import asyncio
+import difflib
 import inspect
 import threading
 from collections.abc import Callable
@@ -21,6 +22,8 @@ from .errors import (
     ValidationError,
     _describe_service,
 )
+from .graph import GraphNode
+from .graph import render as _render_graph
 from .planning import (
     _cached_injected_properties,
     _cached_property_dependencies,
@@ -481,13 +484,14 @@ class Container:
     def validate(self) -> list[ValidationError]:
         """Validate registered dependency graphs without creating service instances."""
         errors: list[ValidationError] = []
-        seen: set[str] = set()
+        seen: set[tuple[Any, str | None, str]] = set()
         for key, registrations in self._registrations.items():
             for registration in registrations:
                 for error in self._validate_registration(key, registration, []):
                     # A shared dependency is reached from several roots; report
-                    # each distinct problem once.
-                    marker = str(error)
+                    # each distinct problem once (ignoring the path detail, so
+                    # the same missing binding isn't listed once per route).
+                    marker = (error.service, error.name, error.message)
                     if marker not in seen:
                         seen.add(marker)
                         errors.append(error)
@@ -498,6 +502,62 @@ class Container:
         errors = self.validate()
         if errors:
             raise ContainerValidationException(errors)
+
+    def graph(self, fmt: str = "text") -> str:
+        """Render the registered dependency graph without constructing anything.
+
+        ``fmt`` is "text" (indented adjacency list), "mermaid", or "dot". Returns
+        a string to print, commit as a snapshot, or paste into a Mermaid/Graphviz
+        renderer — zero dependencies. Dependencies that are not registered are
+        marked so gaps in the graph are visible at a glance."""
+        nodes: list[GraphNode] = []
+        for (interface, name), registrations in self._registrations.items():
+            for registration in registrations:
+                label = _describe_service(interface)
+                if name is not None:
+                    label += f" named '{name}'"
+
+                if (
+                    registration.kind == RegistrationType.SERVICE
+                    and registration.implementation is not None
+                ):
+                    service_plan = self._get_service_plan(registration)
+                    plan_deps = (
+                        *service_plan.dependencies,
+                        *service_plan.property_dependencies,
+                    )
+                elif (
+                    registration.kind == RegistrationType.FACTORY
+                    and registration.factory is not None
+                ):
+                    plan_deps = self._get_factory_plan(registration).dependencies
+                else:
+                    plan_deps = ()
+
+                deps: list[tuple[str, bool, bool]] = []
+                for dep in plan_deps:
+                    if (
+                        dep.inject_container
+                        or dep.dependency_type is inspect.Parameter.empty
+                    ):
+                        continue
+                    dep_name = dep.dependency_key[1] if dep.dependency_key else None
+                    base_key = self._get_validation_key(dep.dependency_type)
+                    registered = (base_key[0], dep_name) in self._registrations
+                    dep_label = _describe_service(dep.dependency_type)
+                    if dep_name is not None:
+                        dep_label += f" named '{dep_name}'"
+                    deps.append(
+                        (dep_label, registered, dep.is_optional or dep.has_default)
+                    )
+
+                kind = (
+                    registration.lifestyle
+                    if registration.kind != RegistrationType.INSTANCE
+                    else "instance"
+                )
+                nodes.append(GraphNode(label, kind, tuple(deps)))
+        return _render_graph(nodes, fmt)
 
     def _resolve_in_scope(
         self, interface: type | str, scope: Scope, name: str | None = None
@@ -673,11 +733,14 @@ class Container:
             described = _describe_service(dependency_type)
             if dep_name is not None:
                 described += f" named '{dep_name}'"
+            trail = self._describe_path(path, dependency_name)
+            hint = self._nearest_registration_hint(dependency_type)
             return [
                 ValidationError(
                     source_key[0],
                     source_key[1],
                     f"Dependency '{dependency_name}' is not registered: {described}.",
+                    detail=f"{trail}{hint}",
                 )
             ]
 
@@ -697,6 +760,27 @@ class Container:
                 ):
                     return (registered_service, None)
         return (dependency_type, None)
+
+    @staticmethod
+    def _describe_path(path: list[tuple[type | str, str | None]], leaf: str) -> str:
+        """Render the chain of owners that leads to a missing dependency, so the
+        error points at where in the graph the break is (Handler -> Repo -> ...)."""
+        if not path:
+            return ""
+        chain = " -> ".join(_describe_service(item[0]) for item in path)
+        return f" Resolution path: {chain} -> {leaf}."
+
+    def _nearest_registration_hint(self, dependency_type: Any) -> str:
+        """Suggest the closest registered service name for a likely typo/misname."""
+        wanted = _describe_service(dependency_type)
+        registered = {
+            _describe_service(service)
+            for service, name in self._registrations
+            if name is None
+        }
+        registered.discard(wanted)
+        close = difflib.get_close_matches(wanted, list(registered), n=1, cutoff=0.6)
+        return f" Did you mean {close[0]}?" if close else ""
 
     def _get_fast_creator(
         self,
@@ -1257,6 +1341,15 @@ class Container:
         registrations = None
         if dependency_key is not None:
             registrations = self._registrations.get(dependency_key)
+            if not registrations and isinstance(dependency_key[0], str):
+                # A string annotation (e.g. an unresolved forward reference under
+                # `from __future__ import annotations`) resolves by matching a
+                # registered class by name — the same rule validate() uses, so
+                # resolve() and validate() never disagree about it.
+                canonical = self._get_validation_key(dependency_key[0])
+                if canonical[0] is not dependency_key[0]:
+                    dependency_key = (canonical[0], dependency_key[1])
+                    registrations = self._registrations.get(dependency_key)
         if registrations:
             registration = registrations[0]
             key = dependency_key

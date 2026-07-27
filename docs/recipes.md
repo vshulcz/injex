@@ -4,6 +4,73 @@ These recipes show where to keep container calls in common application shapes.
 They use small examples on purpose: the important part is the boundary, not the
 domain model.
 
+## One container, many entry points
+
+The point of a container is that the *same* validated graph backs every way the
+app runs — HTTP, a worker, a CLI, tests — so wiring never drifts between them.
+Build it once, validate it once, resolve from it everywhere.
+
+```python
+# bootstrap.py — the one composition root
+from injex import Container
+
+
+def build_container() -> Container:
+    container = Container()
+    container.add_singleton(Settings)
+    container.add_singleton(Database)
+    container.add_scoped(UnitOfWork)
+    container.add_transient(RegisterUser)
+    container.assert_valid()  # fail fast, in every entry point and in CI
+    return container
+```
+
+```python
+# api.py
+from injex.ext.fastapi import Provide, setup_injex
+
+from bootstrap import build_container
+
+app = FastAPI()
+setup_injex(app, build_container())
+
+
+@app.post("/users")
+async def create(use_case: RegisterUser = Provide(RegisterUser)):
+    return use_case.execute(...)
+```
+
+```python
+# worker.py
+from bootstrap import build_container
+
+container = build_container()
+
+
+def handle_job(payload) -> None:
+    with container.create_scope() as scope:  # one scope per job
+        scope.resolve(RegisterUser).execute(payload)
+```
+
+```python
+# cli.py
+from injex.ext.cli import Inject, wire
+
+from bootstrap import build_container
+
+
+@app.command()
+@wire(build_container())
+def register(email: str, use_case: RegisterUser = Inject()):
+    use_case.execute(email)
+```
+
+Each entry point opens its own scope — a request, a job, a command — over one
+shared graph. `python -m injex check bootstrap:build_container` validates that
+graph in CI, so a dependency added for the API but forgotten in the worker fails
+the build instead of a 3 a.m. page. The sections below show each entry point in
+more detail.
+
 ## FastAPI composition root
 
 Keep the container at application startup. Request handlers should receive use
@@ -67,6 +134,63 @@ container)` plus `use_case: RegisterUser = Provide(RegisterUser)`. See
 
 See also: [`examples/fastapi_app.py`](../examples/fastapi_app.py) and
 [`examples/fastapi_ext.py`](../examples/fastapi_ext.py).
+
+## One database session per request
+
+Register the session as a scoped async-generator factory. Injex opens it the
+first time it is resolved in a scope, hands the *same* session to everything in
+that request, and finalizes it (LIFO, via the standard library's
+`AsyncExitStack`) when the scope exits. No middleware, no contextvars.
+
+```python
+from collections.abc import AsyncIterator
+
+from injex import Container
+
+
+class Settings:
+    dsn = "postgresql://localhost/app"
+
+
+class Session:
+    def __init__(self, dsn: str):
+        self.dsn = dsn
+
+    async def close(self) -> None: ...
+
+
+class UserRepository:
+    def __init__(self, session: Session):  # receives the request's session
+        self.session = session
+
+
+async def open_session(settings: Settings) -> AsyncIterator[Session]:
+    session = Session(settings.dsn)
+    try:
+        yield session
+    finally:
+        await session.close()  # runs when the request scope exits
+
+
+container = Container()
+container.add_instance(Settings, Settings())
+container.add_scoped_factory(Session, open_session)
+container.add_transient(UserRepository)
+container.assert_valid()
+
+
+async def handle_request() -> None:
+    async with container.ascope() as scope:
+        repo_a = await scope.aresolve(UserRepository)
+        repo_b = await scope.aresolve(UserRepository)
+        assert repo_a.session is repo_b.session  # one session for the request
+    # session.close() has run here; the next scope opens a fresh session
+```
+
+Under FastAPI the request scope is opened for you by `injex.ext.fastapi`, so a
+route that asks for `UserRepository` (or the `Session` directly) gets one bound
+to that request and released when it returns. Use `add_scoped_factory` with a
+plain generator when the driver is synchronous — teardown works the same.
 
 ## Worker job scope
 

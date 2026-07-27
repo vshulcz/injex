@@ -59,3 +59,50 @@ def test_validate_does_not_duplicate_shared_dependency_errors():
     errors = c.validate()
     messages = [str(e) for e in errors]
     assert len(messages) == len(set(messages))  # no duplicates
+
+
+def test_validation_error_shows_full_resolution_path():
+    class Session:
+        pass
+
+    class Store:
+        def __init__(self, session: Session):
+            self.session = session
+
+    class UseCase:
+        def __init__(self, store: Store):
+            self.store = store
+
+    class Handler:
+        def __init__(self, use_case: UseCase):
+            self.use_case = use_case
+
+    c = Container()
+    c.add_transient(Handler)
+    c.add_transient(UseCase)
+    c.add_transient(Store)  # Session never registered
+
+    errors = c.validate()
+    text = "\n".join(str(e) for e in errors)
+    assert "Handler -> UseCase -> Store -> session" in text
+    # the same missing binding reached by several routes is reported once
+    assert sum("not registered: Session" in str(e) for e in errors) == 1
+
+
+def test_validation_error_suggests_nearest_registered_name():
+    class Database:
+        pass
+
+    class Databse:  # deliberate typo, registered instead of Database
+        pass
+
+    class Service:
+        def __init__(self, db: Database):
+            self.db = db
+
+    c = Container()
+    c.add_transient(Service)
+    c.add_singleton(Databse)
+
+    errors = c.validate()
+    assert any("Did you mean Databse?" in str(e) for e in errors)

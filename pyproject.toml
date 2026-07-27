@@ -30,6 +30,9 @@ dependencies = []
 [project.optional-dependencies]
 fastapi = ["fastapi>=0.100"]
 
+[project.scripts]
+injex = "injex.cli:main"
+
 [tool.uv]
 # fastapi/httpx are intentionally NOT here: the type-check and FastAPI jobs add
 # them per-job (they pull pydantic-core, which has no wheel for Python 3.14 yet).
@@ -59,7 +62,8 @@ include = ["injex*"]
 
 [tool.codespell]
 skip = "./.git,./.venv,./dist,./uv.lock,./site/assets,*.svg,*.png,*.ico"
-ignore-words-list = "injex"
+# "sesion"/"databse" appear only as intentional typo examples for the near-name hint.
+ignore-words-list = "injex,sesion,databse"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]

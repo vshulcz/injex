@@ -18,6 +18,12 @@ Key facts:
 - Features: typed constructor injection, factories, instances, named
   registrations (`Annotated[T, Named(...)]`), optional dependencies, property
   injection, test overrides, graph validation
+- CI gate: `python -m injex check module:container` validates the graph and exits
+  non-zero on any error (also the `injex` console script)
+- Graph inspection: `container.graph(fmt="text"|"mermaid"|"dot")` renders the
+  wiring as a string (zero dependencies)
+- Validation errors show the full resolution path and suggest the nearest
+  registered name
 - Resources: generator factories (sync and async) with teardown finalized on
   scope exit or `close()` / `aclose()`
 - Async: `aresolve()`, `ascope()`, `acall()`, `aclose()`

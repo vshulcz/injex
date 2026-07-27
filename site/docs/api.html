@@ -87,8 +87,10 @@
 
         <h2>Validation</h2>
         <ul>
-          <li><code>validate()</code> returns validation errors.</li>
+          <li><code>validate()</code> returns validation errors (with the full resolution path and a nearest-name hint).</li>
           <li><code>assert_valid()</code> raises <code>ContainerValidationException</code> if validation fails.</li>
+          <li><code>python -m injex check module:container</code> validates in CI and exits non-zero on any error.</li>
+          <li><code>graph(fmt="text")</code> renders the wiring as text, Mermaid, or DOT.</li>
         </ul>
 
         <h2>Async</h2>

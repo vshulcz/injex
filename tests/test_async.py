@@ -265,3 +265,38 @@ def test_async_singleton_built_once_under_concurrent_resolve():
         assert len({id(r) for r in results}) == 1  # all got the same instance
 
     asyncio.run(main())
+
+
+def test_scoped_session_shared_across_transitive_deps_then_closed():
+    # The "one DB session per request" recipe: one session for the whole scope,
+    # shared by every dependency that needs it, finalized on scope exit.
+    events = []
+
+    class Session:
+        async def close(self) -> None:
+            events.append("close")
+
+    class Repo:
+        def __init__(self, session: Session) -> None:
+            self.session = session
+
+    async def open_session():
+        session = Session()
+        events.append("open")
+        try:
+            yield session
+        finally:
+            await session.close()
+
+    async def main():
+        c = Container()
+        c.add_scoped_factory(Session, open_session)
+        c.add_transient(Repo)
+        async with c.ascope() as scope:
+            first = await scope.aresolve(Repo)
+            second = await scope.aresolve(Repo)
+            assert first.session is second.session
+            assert events == ["open"]  # opened once, not per resolve
+        assert events == ["open", "close"]  # closed when the scope exits
+
+    asyncio.run(main())
