@@ -1257,6 +1257,15 @@ class Container:
         registrations = None
         if dependency_key is not None:
             registrations = self._registrations.get(dependency_key)
+            if not registrations and isinstance(dependency_key[0], str):
+                # A string annotation (e.g. an unresolved forward reference under
+                # `from __future__ import annotations`) resolves by matching a
+                # registered class by name — the same rule validate() uses, so
+                # resolve() and validate() never disagree about it.
+                canonical = self._get_validation_key(dependency_key[0])
+                if canonical[0] is not dependency_key[0]:
+                    dependency_key = (canonical[0], dependency_key[1])
+                    registrations = self._registrations.get(dependency_key)
         if registrations:
             registration = registrations[0]
             key = dependency_key
