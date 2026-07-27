@@ -107,6 +107,17 @@ addopts = "--cov=injex --cov-report=term-missing"
 
 [tool.coverage.run]
 source = ["injex"]
+# Framework-glue modules import an optional web framework, so they are exercised
+# by the separate integrations CI job (which installs those frameworks) rather
+# than the coverage-gated main test run.
+omit = [
+    "injex/ext/fastapi.py",
+    "injex/ext/django.py",
+    "injex/ext/starlette.py",
+    "injex/ext/litestar.py",
+    "injex/ext/flask.py",
+    "injex/ext/aiohttp.py",
+]
 
 [tool.coverage.report]
 fail_under = 90

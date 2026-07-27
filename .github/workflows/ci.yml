@@ -69,9 +69,11 @@ jobs:
           python-version: "3.13"
 
       - name: Install dependencies
+        # Install every optional framework so mypy checks the ext modules and
+        # their tests against real types, not missing-import stubs.
         run: |
           uv sync
-          uv pip install fastapi httpx "typing-extensions>=4.13"
+          uv pip install fastapi httpx "django>=4.2" starlette litestar flask aiohttp "typing-extensions>=4.13"
 
       - name: Run type checks
         run: uv run --no-sync mypy injex tests
