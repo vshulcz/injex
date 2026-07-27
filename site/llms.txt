@@ -29,8 +29,11 @@ Key facts:
 - Async: `aresolve()`, `ascope()`, `acall()`, `aclose()`
 - Function injection: `container.call(fn, **overrides)` / `acall`
 - Auto-registration: `@injectable` + `container.scan(module)`
-- Integrations: `injex.ext.fastapi` (per-request scope + `Provide`),
-  `injex.ext.cli` (`Inject` + `wire` for Typer/Click)
+- Context data: `add_context(T)` + `create_scope(context={T: value})` injects
+  per-scope values (the request, current user, tenant id) without globals
+- Integrations (`injex.ext.*`): per-request scope for FastAPI, Django, Starlette,
+  Litestar, Flask, aiohttp; `inject`/`ainject` decorators for task/handler runners
+  (Celery, arq, RQ, dramatiq, aiogram); `Inject`+`wire` for Typer/Click CLIs
 - Performance snapshot: `0.333 µs/op` median resolve time on the project small
   service-graph benchmark
 

@@ -1171,6 +1171,7 @@ class TestContainer(unittest.TestCase):
             "AsyncScope",
             "Container",
             "ContainerValidationException",
+            "ContextValueMissingException",
             "CyclicDependencyException",
             "DIException",
             "InvalidLifestyleException",

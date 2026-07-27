@@ -14,6 +14,7 @@ from typing import (
 from .errors import (
     AsyncResolutionRequiredException,
     ContainerValidationException,
+    ContextValueMissingException,
     CyclicDependencyException,
     InvalidLifestyleException,
     MissingTypeAnnotationException,
@@ -67,11 +68,14 @@ class _NotFlat(Exception):
 
 
 class Scope:
-    __slots__ = ("_scoped_instances", "_stack", "container")
+    __slots__ = ("_context", "_scoped_instances", "_stack", "container")
 
-    def __init__(self, container: "Container"):
+    def __init__(self, container: "Container", context: dict[Any, Any] | None = None):
         self.container = container
         self._scoped_instances: dict[Any, Any] = {}
+        # Per-scope values supplied by the caller (e.g. the request), read by
+        # dependencies registered with add_context().
+        self._context: dict[Any, Any] = context or {}
         # Created lazily so a scope that opens no resources (the common request
         # scope) pays nothing for the ExitStack.
         self._stack: ExitStack | None = None
@@ -129,11 +133,12 @@ class AsyncScope:
     """Async resolution scope. Async resources opened inside it are finalized
     (LIFO) when the scope exits."""
 
-    __slots__ = ("_scoped_instances", "_stack", "container")
+    __slots__ = ("_context", "_scoped_instances", "_stack", "container")
 
-    def __init__(self, container: "Container"):
+    def __init__(self, container: "Container", context: dict[Any, Any] | None = None):
         self.container = container
         self._scoped_instances: dict[Any, Any] = {}
+        self._context: dict[Any, Any] = context or {}
         # Created lazily: a scope that opens no async resources pays nothing.
         self._stack: AsyncExitStack | None = None
 
@@ -314,6 +319,15 @@ class Container:
         self._registrations.setdefault(key, []).append(registration)
         self._invalidate_fast_creators()
 
+    def add_context(self, interface: type) -> None:
+        """Declare that ``interface`` is supplied per-scope by the caller through
+        ``create_scope(context={interface: value})`` / ``ascope(...)`` rather than
+        constructed. Services may depend on it, validate() treats it as satisfied,
+        and resolving it reads the value from the current scope's context."""
+        registration = Registration(kind=RegistrationType.CONTEXT)
+        self._registrations.setdefault((interface, None), []).append(registration)
+        self._invalidate_fast_creators()
+
     def override(
         self,
         interface: type,
@@ -468,10 +482,12 @@ class Container:
         scope = self.create_scope()
         return scope.resolve_all(interface, name)
 
-    def create_scope(self) -> Scope:
+    def create_scope(self, context: dict[Any, Any] | None = None) -> Scope:
         """Open a sync scope. Scoped services are cached per-scope; for async
-        resources use ``async with container.ascope()`` instead."""
-        return Scope(self)
+        resources use ``async with container.ascope()`` instead. ``context`` maps
+        a type registered with add_context() to the value for this scope (e.g.
+        ``{Request: request}``)."""
+        return Scope(self, context)
 
     def scan(self, *sources: Any) -> None:
         """Register every ``@injectable`` class found in the given modules.
@@ -595,11 +611,12 @@ class Container:
                         (dep_label, registered, dep.is_optional or dep.has_default)
                     )
 
-                kind = (
-                    registration.lifestyle
-                    if registration.kind != RegistrationType.INSTANCE
-                    else "instance"
-                )
+                if registration.kind == RegistrationType.INSTANCE:
+                    kind = "instance"
+                elif registration.kind == RegistrationType.CONTEXT:
+                    kind = "context"
+                else:
+                    kind = registration.lifestyle
                 nodes.append(GraphNode(label, kind, tuple(deps)))
         return _render_graph(nodes, fmt)
 
@@ -632,7 +649,9 @@ class Container:
         registration: Registration,
         path: list[tuple[type | str, str | None]],
     ) -> list[ValidationError]:
-        if registration.kind == RegistrationType.INSTANCE:
+        # Instances are already built; context values are supplied per-scope by
+        # the caller. Both are leaves with nothing to validate.
+        if registration.kind in (RegistrationType.INSTANCE, RegistrationType.CONTEXT):
             return []
 
         if key in path:
@@ -1283,6 +1302,11 @@ class Container:
         scope: Scope,
         key: tuple[type | str, str | None],
     ) -> Any:
+        if registration.kind == RegistrationType.CONTEXT:
+            if key[0] in scope._context:
+                return scope._context[key[0]]
+            raise ContextValueMissingException(_describe_service(key[0]))
+
         fast_creator = self._get_fast_creator(registration, key)
         if fast_creator is not None:
             return fast_creator(scope)
@@ -1396,9 +1420,17 @@ class Container:
                     registrations = self._registrations.get(dependency_key)
         if registrations:
             registration = registrations[0]
+            assert dependency_key is not None  # implied by a found registration
             key = dependency_key
             if registration.kind == RegistrationType.INSTANCE:
                 return registration.instance
+            if registration.kind == RegistrationType.CONTEXT:
+                if key[0] in scope._context:
+                    return scope._context[key[0]]
+                raise ContextValueMissingException(
+                    _describe_service(key[0]),
+                    required_by=self._describe_owner(owner, dependency_plan.name),
+                )
 
             instance_key = (key, registration)
             lifestyle = registration.lifestyle
@@ -1464,10 +1496,11 @@ class Container:
 
     # ------------------------------------------------------------------ async
 
-    def ascope(self) -> AsyncScope:
+    def ascope(self, context: dict[Any, Any] | None = None) -> AsyncScope:
         """Open an async resolution scope. Use as ``async with``; async resources
-        resolved inside are finalized when the block exits."""
-        return AsyncScope(self)
+        resolved inside are finalized when the block exits. ``context`` maps a
+        type registered with add_context() to the value for this scope."""
+        return AsyncScope(self, context)
 
     async def acall(self, func: Callable[..., Any], /, **overrides: Any) -> Any:
         """Async counterpart of :meth:`call`. Awaits async dependencies, awaits
@@ -1587,6 +1620,10 @@ class Container:
     ) -> Any:
         if registration.kind == RegistrationType.INSTANCE:
             return registration.instance
+        if registration.kind == RegistrationType.CONTEXT:
+            if key[0] in scope._context:
+                return scope._context[key[0]]
+            raise ContextValueMissingException(_describe_service(key[0]))
 
         instance_key = (key, registration)
         lifestyle = registration.lifestyle

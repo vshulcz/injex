@@ -7,6 +7,32 @@ and this project uses semantic versioning.
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-07-27
+
+### Added
+
+- Context data. `add_context(T)` declares a type supplied per scope via
+  `create_scope(context={T: value})` / `ascope(context=...)`, so the request, the
+  current user, a tenant id, and similar per-request values can be injected into
+  factories without globals or `contextvars`. `validate()` treats a context type
+  as satisfied; resolving one without a value raises `ContextValueMissingException`.
+- The FastAPI integration puts the request in each request scope's context, so a
+  service registered with `add_context(Request)` receives the live `fastapi.Request`.
+- Django integration (`injex.ext.django`, optional extra `injex[django]`).
+  `InjexMiddleware` opens a scope per request on `request.injex` and places the
+  `HttpRequest` in its context.
+- Starlette (`injex.ext.starlette`) and Litestar (`injex.ext.litestar`)
+  integrations: an `InjexMiddleware` that opens a scope per request on
+  `request.state.injex` with the request in its context. Optional extras
+  `injex[starlette]` / `injex[litestar]`.
+- Flask (`injex.ext.flask`, `setup_injex(app, container)`, scope on `flask.g.injex`)
+  and aiohttp (`injex.ext.aiohttp`, `injex_middleware(container)`, scope on
+  `request["injex"]`) integrations, each with the request in the scope context.
+  Optional extras `injex[flask]` / `injex[aiohttp]`.
+- `injex.ext.tasks.inject` / `ainject`: scope-per-call injection for task and
+  handler functions (Celery, arq, RQ, dramatiq, aiogram, …). Framework-agnostic
+  and dependency-free.
+
 ## [1.7.1] - 2026-07-27
 
 ### Changed

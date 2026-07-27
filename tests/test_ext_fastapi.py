@@ -70,3 +70,26 @@ def test_singleton_identity_across_requests():
         # Settings is a singleton: same name proves it resolves consistently.
         assert client.get("/name").json()["name"] == "prod"
         assert client.get("/name").json()["name"] == "prod"
+
+
+def test_request_is_injected_from_context():
+    from fastapi import Request
+
+    class CurrentUser:
+        def __init__(self, request: Request) -> None:
+            self.user = request.headers.get("x-user", "anon")
+
+    container = Container()
+    container.add_context(Request)  # the live request is provided per scope
+    container.add_transient(CurrentUser)
+
+    app = FastAPI()
+    setup_injex(app, container)
+
+    @app.get("/me")
+    def me(user: CurrentUser = Provide(CurrentUser)) -> dict[str, str]:
+        return {"user": user.user}
+
+    with TestClient(app) as client:
+        assert client.get("/me", headers={"x-user": "ada"}).json() == {"user": "ada"}
+        assert client.get("/me").json() == {"user": "anon"}  # per-request

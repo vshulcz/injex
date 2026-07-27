@@ -48,9 +48,12 @@ def setup_injex(app: FastAPI, container: Container) -> Container:
 async def _request_scope(request: Request) -> AsyncIterator[AsyncScope]:
     """One Injex scope per request. FastAPI caches this dependency within a
     request, so every ``Provide`` in the same request shares the scope; its
-    resources are finalized when the request ends."""
+    resources are finalized when the request ends.
+
+    The request is placed in the scope's context, so a service registered with
+    ``container.add_context(Request)`` receives the live ``fastapi.Request``."""
     container: Container = request.app.state.injex_container
-    async with container.ascope() as scope:
+    async with container.ascope(context={Request: request}) as scope:
         yield scope
 
 

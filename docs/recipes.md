@@ -192,6 +192,42 @@ route that asks for `UserRepository` (or the `Session` directly) gets one bound
 to that request and released when it returns. Use `add_scoped_factory` with a
 plain generator when the driver is synchronous — teardown works the same.
 
+## Request data in the graph
+
+Sometimes a factory needs the request itself: the authenticated user, a tenant
+id, a trace id. Declare that type as context and pass it when you open the scope.
+Injex injects it like any other dependency, and `validate()` still counts it as
+satisfied — no globals, no `contextvars`.
+
+```python
+from injex import Container
+
+
+class Request:
+    def __init__(self, user_id: str):
+        self.user_id = user_id
+
+
+class AuditLog:
+    def __init__(self, request: Request):  # needs the current request
+        self.request = request
+
+
+container = Container()
+container.add_context(Request)  # supplied per scope, not constructed
+container.add_transient(AuditLog)
+container.assert_valid()  # Request counts as satisfied
+
+
+def handle(request: Request) -> None:
+    with container.create_scope(context={Request: request}) as scope:
+        scope.resolve(AuditLog)  # gets this request
+```
+
+Resolving a context-dependent service without providing the value raises
+`ContextValueMissingException`, so a forgotten `context=` fails loudly instead of
+silently. Async is the same with `ascope(context={...})`.
+
 ## Worker job scope
 
 Workers usually have two lifetimes: process lifetime and job lifetime. Keep
@@ -255,6 +291,30 @@ The rule is simple: create a new scope for each job, and do not reuse scoped
 state between jobs. If jobs run concurrently, avoid global overrides for
 job-specific values; put those values in the per-job container or pass them as
 method arguments.
+
+For task and handler frameworks, `injex.ext.tasks.inject` (and `ainject` for
+async) does the scope-per-call wiring for you — mark the injected parameters and
+the runner only sees the rest:
+
+```python
+from injex.ext.cli import Inject
+from injex.ext.tasks import inject, ainject
+
+
+@app.task  # Celery / arq / RQ / dramatiq
+@inject(container)
+def import_user(job_id: str, job: ImportUserJob = Inject()):
+    job.run()
+
+
+@router.message()  # aiogram
+@ainject(container)
+async def on_message(message, users: UserService = Inject()):
+    await users.register(message.from_user.id)
+```
+
+Each call opens its own scope, so a scoped session or unit of work is finalized
+when the task or handler returns.
 
 ## CLI command wiring
 

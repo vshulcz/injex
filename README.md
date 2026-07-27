@@ -12,8 +12,9 @@
 cycles _before_ your app starts — with zero runtime dependencies.**
 
 You wire one service graph at startup, validate it in a single call, then reuse it
-from FastAPI, Typer, workers, scripts, and tests. Application classes stay plain:
-normal constructors, normal type hints, no decorators.
+from FastAPI, Django, Starlette, Litestar, Flask, aiohttp, Celery and other
+workers, CLIs, and tests. Application classes stay plain: normal constructors,
+normal type hints, no decorators.
 
 ![Injex validates the dependency graph before startup](https://raw.githubusercontent.com/vshulcz/injex/main/site/assets/validate-demo.gif)
 
@@ -142,6 +143,20 @@ from injex.ext.cli import Inject, wire
 @wire(container)
 def register(email: str, use_case: RegisterUser = Inject()):
     use_case.execute(email)
+```
+
+**More frameworks** — `injex.ext` ships a one-line, per-request scope for Django,
+Starlette, Litestar, Flask, and aiohttp, plus `inject` / `ainject` decorators for
+task and handler runners (Celery, arq, RQ, dramatiq, aiogram). The request is put
+in the scope's context, so a service can take it directly:
+
+```python
+container.add_context(Request)  # provided per scope, not constructed
+
+
+class AuditLog:
+    def __init__(self, request: Request):  # the current request, injected
+        self.request = request
 ```
 
 **Larger apps** — mark classes with `@injectable` and register them in one call:
@@ -274,6 +289,7 @@ with the modern full-featured ones — **dishka** and **Wireup** — see
 | `add_singleton/transient/scoped(T, Impl)` | Register a class for the chosen lifetime. |
 | `add_*_factory(T, factory)` | Construction needs custom code; a generator factory becomes a resource with teardown. |
 | `add_instance(T, instance)` | You already have the object. |
+| `add_context(T)` | `T` is supplied per scope via `create_scope(context={T: value})` (e.g. the request). |
 | `scan(module)` | Register every `@injectable` class in a module. |
 | `resolve(T)` / `resolve_all(T)` | Resolve one, or all unnamed implementations. |
 | `call(fn, **overrides)` | Invoke a function with its dependencies injected. |
