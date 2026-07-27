@@ -32,6 +32,8 @@ fastapi = ["fastapi>=0.100"]
 django = ["django>=4.2"]
 starlette = ["starlette>=0.30"]
 litestar = ["litestar>=2.0"]
+flask = ["flask>=2.2"]
+aiohttp = ["aiohttp>=3.9"]
 
 [project.scripts]
 injex = "injex.cli:main"

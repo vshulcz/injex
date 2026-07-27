@@ -23,6 +23,10 @@ and this project uses semantic versioning.
   integrations: an `InjexMiddleware` that opens a scope per request on
   `request.state.injex` with the request in its context. Optional extras
   `injex[starlette]` / `injex[litestar]`.
+- Flask (`injex.ext.flask`, `setup_injex(app, container)`, scope on `flask.g.injex`)
+  and aiohttp (`injex.ext.aiohttp`, `injex_middleware(container)`, scope on
+  `request["injex"]`) integrations, each with the request in the scope context.
+  Optional extras `injex[flask]` / `injex[aiohttp]`.
 - `injex.ext.tasks.inject` / `ainject`: scope-per-call injection for task and
   handler functions (Celery, arq, RQ, dramatiq, aiogram, …). Framework-agnostic
   and dependency-free.

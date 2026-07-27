@@ -146,10 +146,10 @@ jobs:
         # another package's resolution would otherwise pull an older one.
         run: |
           uv sync
-          uv pip install fastapi httpx "django>=4.2" starlette litestar "typing-extensions>=4.13"
+          uv pip install fastapi httpx "django>=4.2" starlette litestar flask aiohttp "typing-extensions>=4.13"
 
       - name: Run framework integration tests
-        run: uv run --no-sync pytest tests/test_ext_fastapi.py tests/test_ext_django.py tests/test_ext_starlette.py tests/test_ext_litestar.py --no-cov
+        run: uv run --no-sync pytest tests/test_ext_fastapi.py tests/test_ext_django.py tests/test_ext_starlette.py tests/test_ext_litestar.py tests/test_ext_flask.py tests/test_ext_aiohttp.py --no-cov
 
   links:
     name: Link Check
