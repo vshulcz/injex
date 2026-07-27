@@ -3,10 +3,21 @@
 import inspect
 
 import click
+import pytest
 from click.testing import CliRunner
 
 from injex import Container
 from injex.ext.cli import Inject, wire
+
+
+def test_wire_requires_a_type_annotation():
+    container = Container()
+
+    with pytest.raises(TypeError, match="no type annotation"):
+
+        @wire(container)
+        def command(name: str, service=Inject()):  # service has no annotation
+            return service
 
 
 class Greeter:

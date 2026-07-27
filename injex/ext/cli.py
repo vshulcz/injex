@@ -53,6 +53,13 @@ def wire(container: "Container") -> Callable[[Callable[..., T]], Callable[..., T
             for param in signature.parameters.values()
             if param.default is not _INJECT
         ]
+        for param in signature.parameters.values():
+            if param.default is _INJECT and param.annotation is inspect.Parameter.empty:
+                raise TypeError(
+                    f"Parameter '{param.name}' of {func.__name__}() is marked "
+                    "Inject() but has no type annotation; add one so injex knows "
+                    "what to resolve."
+                )
 
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> T:

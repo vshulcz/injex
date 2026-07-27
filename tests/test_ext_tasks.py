@@ -4,9 +4,21 @@ handler functions, framework-agnostic (Celery, arq, aiogram, ...)."""
 import asyncio
 import inspect
 
+import pytest
+
 from injex import Container
 from injex.ext.cli import Inject
 from injex.ext.tasks import ainject, inject
+
+
+def test_inject_requires_a_type_annotation():
+    container = Container()
+
+    with pytest.raises(TypeError, match="no type annotation"):
+
+        @inject(container)
+        def task(order_id: int, thing=Inject()):  # thing has no annotation
+            return thing
 
 
 class Orders:
