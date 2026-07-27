@@ -16,6 +16,7 @@ class RegistrationType:
     SERVICE = "service"
     FACTORY = "factory"
     INSTANCE = "instance"
+    CONTEXT = "context"  # value supplied per-scope via create_scope(context=...)
 
 
 _SCAN_ATTR = "__injex_register__"

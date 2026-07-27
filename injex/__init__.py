@@ -4,6 +4,7 @@ from .container import AsyncScope, Container, Scope
 from .errors import (
     AsyncResolutionRequiredException,
     ContainerValidationException,
+    ContextValueMissingException,
     CyclicDependencyException,
     DIException,
     InvalidLifestyleException,
@@ -64,6 +65,7 @@ __all__ = [
     "AsyncScope",
     "Container",
     "ContainerValidationException",
+    "ContextValueMissingException",
     "CyclicDependencyException",
     "DIException",
     "InvalidLifestyleException",

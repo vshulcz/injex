@@ -30,6 +30,17 @@ class MissingTypeAnnotationException(DIException):
         )
 
 
+class ContextValueMissingException(DIException):
+    def __init__(self, interface_description: str, required_by: str | None = None):
+        message = (
+            f"No context value for '{interface_description}' in the current scope. "
+            "Provide it via create_scope(context={...}) or ascope(context={...})."
+        )
+        if required_by is not None:
+            message += f" It is required by {required_by}."
+        super().__init__(message)
+
+
 class InvalidLifestyleException(DIException):
     def __init__(self, lifestyle: str):
         super().__init__(
