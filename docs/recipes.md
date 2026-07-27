@@ -292,6 +292,30 @@ state between jobs. If jobs run concurrently, avoid global overrides for
 job-specific values; put those values in the per-job container or pass them as
 method arguments.
 
+For task and handler frameworks, `injex.ext.tasks.inject` (and `ainject` for
+async) does the scope-per-call wiring for you — mark the injected parameters and
+the runner only sees the rest:
+
+```python
+from injex.ext.cli import Inject
+from injex.ext.tasks import inject, ainject
+
+
+@app.task  # Celery / arq / RQ / dramatiq
+@inject(container)
+def import_user(job_id: str, job: ImportUserJob = Inject()):
+    job.run()
+
+
+@router.message()  # aiogram
+@ainject(container)
+async def on_message(message, users: UserService = Inject()):
+    await users.register(message.from_user.id)
+```
+
+Each call opens its own scope, so a scoped session or unit of work is finalized
+when the task or handler returns.
+
 ## CLI command wiring
 
 CLI modules are easy to turn into global state because commands often share

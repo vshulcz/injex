@@ -14,6 +14,14 @@ and this project uses semantic versioning.
   current user, a tenant id, and similar per-request values can be injected into
   factories without globals or `contextvars`. `validate()` treats a context type
   as satisfied; resolving one without a value raises `ContextValueMissingException`.
+- The FastAPI integration puts the request in each request scope's context, so a
+  service registered with `add_context(Request)` receives the live `fastapi.Request`.
+- Django integration (`injex.ext.django`, optional extra `injex[django]`).
+  `InjexMiddleware` opens a scope per request on `request.injex` and places the
+  `HttpRequest` in its context.
+- `injex.ext.tasks.inject` / `ainject`: scope-per-call injection for task and
+  handler functions (Celery, arq, RQ, dramatiq, aiogram, …). Framework-agnostic
+  and dependency-free.
 
 ## [1.7.1] - 2026-07-27
 
