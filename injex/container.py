@@ -72,16 +72,23 @@ class Scope:
     def __init__(self, container: "Container"):
         self.container = container
         self._scoped_instances: dict[Any, Any] = {}
-        # Holds sync resources opened in this scope; finalized (LIFO) on exit.
-        self._stack = ExitStack()
+        # Created lazily so a scope that opens no resources (the common request
+        # scope) pays nothing for the ExitStack.
+        self._stack: ExitStack | None = None
 
     def __enter__(self) -> "Scope":
         return self
 
     def __exit__(self, exc_type: Any, exc: Any, traceback: Any) -> None:
         # Finalize sync resources (LIFO), then drop per-scope instances.
-        self._stack.close()
+        if self._stack is not None:
+            self._stack.close()
         self._scoped_instances.clear()
+
+    def _ensure_stack(self) -> ExitStack:
+        if self._stack is None:
+            self._stack = ExitStack()
+        return self._stack
 
     @overload
     def resolve(self, interface: type[T], name: str | None = None) -> T: ...
@@ -119,13 +126,20 @@ class AsyncScope:
     def __init__(self, container: "Container"):
         self.container = container
         self._scoped_instances: dict[Any, Any] = {}
-        self._stack = AsyncExitStack()
+        # Created lazily: a scope that opens no async resources pays nothing.
+        self._stack: AsyncExitStack | None = None
 
     async def __aenter__(self) -> "AsyncScope":
         return self
 
     async def __aexit__(self, exc_type: Any, exc: Any, traceback: Any) -> None:
-        await self._stack.aclose()
+        if self._stack is not None:
+            await self._stack.aclose()
+
+    def _ensure_stack(self) -> AsyncExitStack:
+        if self._stack is None:
+            self._stack = AsyncExitStack()
+        return self._stack
 
     @overload
     async def aresolve(self, interface: type[T], name: str | None = None) -> T: ...
@@ -1400,7 +1414,7 @@ class Container:
             cm = contextmanager(factory)(*args)
             if registration.lifestyle == LifeStyle.SINGLETON:
                 return self._get_sync_stack().enter_context(cm)
-            return scope._stack.enter_context(cm)
+            return scope._ensure_stack().enter_context(cm)
         return factory(*args)
 
     def _get_sync_stack(self) -> ExitStack:
@@ -1670,7 +1684,7 @@ class Container:
             for dependency_plan in plan.dependencies
         ]
         if registration.is_resource:
-            stack = self._get_async_stack() if singleton else scope._stack
+            stack = self._get_async_stack() if singleton else scope._ensure_stack()
             cm = asynccontextmanager(factory)(*args)
             return await stack.enter_async_context(cm)
         if registration.is_async:
