@@ -73,7 +73,7 @@ jobs:
         # their tests against real types, not missing-import stubs.
         run: |
           uv sync
-          uv pip install fastapi httpx "django>=4.2" starlette litestar flask aiohttp "typing-extensions>=4.13"
+          uv pip install fastapi httpx "django>=4.2" starlette litestar flask aiohttp quart sanic sanic-testing "typing-extensions>=4.13"
 
       - name: Run type checks
         run: uv run --no-sync mypy injex tests
