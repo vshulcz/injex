@@ -2,6 +2,7 @@
 the scope context, and scoped resources finalized when the request ends."""
 
 import asyncio
+from typing import Any
 
 import pytest
 
@@ -14,12 +15,15 @@ from injex import Container
 from injex.ext.aiohttp import injex_middleware
 
 
-async def _fetch(container: Container, routes: list, path: str, **headers) -> str:
+async def _fetch(
+    container: Container, routes: list[Any], path: str, **headers: str
+) -> str:
     app = web.Application(middlewares=[injex_middleware(container)])
     app.add_routes(routes)
     async with TestClient(TestServer(app)) as client:
         response = await client.get(path, headers=headers)
-        return await response.text()
+        text: str = await response.text()
+        return text
 
 
 def test_middleware_resolves_and_injects_the_request():

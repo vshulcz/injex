@@ -18,22 +18,18 @@ live ``aiohttp.web.Request``. Install with ``pip install injex[aiohttp]``.
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
-
 from aiohttp import web
+from aiohttp.typedefs import Handler, Middleware
 
 from injex import Container
 
-_Handler = Callable[[web.Request], Awaitable[web.StreamResponse]]
-_Middleware = Callable[[web.Request, _Handler], Awaitable[web.StreamResponse]]
 
-
-def injex_middleware(container: Container) -> _Middleware:
+def injex_middleware(container: Container) -> Middleware:
     """Build an aiohttp middleware that opens an Injex scope per request on
     ``request["injex"]`` and finalizes its scoped resources when the request ends."""
 
     @web.middleware
-    async def middleware(request: web.Request, handler: _Handler) -> web.StreamResponse:
+    async def middleware(request: web.Request, handler: Handler) -> web.StreamResponse:
         async with container.ascope(context={web.Request: request}) as scope:
             request["injex"] = scope
             return await handler(request)

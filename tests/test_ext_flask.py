@@ -32,7 +32,8 @@ def test_middleware_resolves_and_injects_the_request():
 
     @app.route("/me")
     def me() -> str:
-        return g.injex.resolve(CurrentUser).user
+        user: CurrentUser = g.injex.resolve(CurrentUser)
+        return user.user
 
     client = app.test_client()
     assert client.get("/me", headers={"X-User": "ada"}).text == "ada"
