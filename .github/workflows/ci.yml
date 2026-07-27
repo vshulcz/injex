@@ -123,8 +123,8 @@ jobs:
           name: coverage-${{ matrix.os }}-${{ matrix.python-version }}
           path: coverage.xml
 
-  fastapi:
-    name: FastAPI integration
+  integrations:
+    name: Framework integrations
     runs-on: ubuntu-latest
 
     steps:
@@ -142,12 +142,14 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
+        # typing-extensions>=4.13 keeps pydantic-core (via fastapi) working when
+        # django's resolution would otherwise pull an older one.
         run: |
           uv sync
-          uv pip install fastapi httpx "typing-extensions>=4.13"
+          uv pip install fastapi httpx "django>=4.2" "typing-extensions>=4.13"
 
-      - name: Run FastAPI integration tests
-        run: uv run --no-sync pytest tests/test_ext_fastapi.py --no-cov
+      - name: Run framework integration tests
+        run: uv run --no-sync pytest tests/test_ext_fastapi.py tests/test_ext_django.py --no-cov
 
   links:
     name: Link Check
