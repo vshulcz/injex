@@ -22,6 +22,8 @@ from .errors import (
     ValidationError,
     _describe_service,
 )
+from .graph import GraphNode
+from .graph import render as _render_graph
 from .planning import (
     _cached_injected_properties,
     _cached_property_dependencies,
@@ -500,6 +502,62 @@ class Container:
         errors = self.validate()
         if errors:
             raise ContainerValidationException(errors)
+
+    def graph(self, fmt: str = "text") -> str:
+        """Render the registered dependency graph without constructing anything.
+
+        ``fmt`` is "text" (indented adjacency list), "mermaid", or "dot". Returns
+        a string to print, commit as a snapshot, or paste into a Mermaid/Graphviz
+        renderer — zero dependencies. Dependencies that are not registered are
+        marked so gaps in the graph are visible at a glance."""
+        nodes: list[GraphNode] = []
+        for (interface, name), registrations in self._registrations.items():
+            for registration in registrations:
+                label = _describe_service(interface)
+                if name is not None:
+                    label += f" named '{name}'"
+
+                if (
+                    registration.kind == RegistrationType.SERVICE
+                    and registration.implementation is not None
+                ):
+                    service_plan = self._get_service_plan(registration)
+                    plan_deps = (
+                        *service_plan.dependencies,
+                        *service_plan.property_dependencies,
+                    )
+                elif (
+                    registration.kind == RegistrationType.FACTORY
+                    and registration.factory is not None
+                ):
+                    plan_deps = self._get_factory_plan(registration).dependencies
+                else:
+                    plan_deps = ()
+
+                deps: list[tuple[str, bool, bool]] = []
+                for dep in plan_deps:
+                    if (
+                        dep.inject_container
+                        or dep.dependency_type is inspect.Parameter.empty
+                    ):
+                        continue
+                    dep_name = dep.dependency_key[1] if dep.dependency_key else None
+                    base_key = self._get_validation_key(dep.dependency_type)
+                    registered = (base_key[0], dep_name) in self._registrations
+                    dep_label = _describe_service(dep.dependency_type)
+                    if dep_name is not None:
+                        dep_label += f" named '{dep_name}'"
+                    deps.append(
+                        (dep_label, registered, dep.is_optional or dep.has_default)
+                    )
+
+                kind = (
+                    registration.lifestyle
+                    if registration.kind != RegistrationType.INSTANCE
+                    else "instance"
+                )
+                nodes.append(GraphNode(label, kind, tuple(deps)))
+        return _render_graph(nodes, fmt)
 
     def _resolve_in_scope(
         self, interface: type | str, scope: Scope, name: str | None = None
