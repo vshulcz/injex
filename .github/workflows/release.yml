@@ -18,8 +18,7 @@ on:
           - "true"
 
 permissions:
-  contents: write
-  id-token: write
+  contents: read
 
 env:
   UV_FROZEN: "1"
@@ -28,18 +27,21 @@ jobs:
   build:
     name: Build release artifacts
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the GitHub release and upload assets
+      id-token: write # PyPI trusted publishing (OIDC)
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           enable-cache: true
 
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: "3.13"
 
@@ -66,7 +68,7 @@ jobs:
           PY
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: injex-dist
           path: |
@@ -75,7 +77,7 @@ jobs:
 
       - name: Attach artifacts to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
         with:
           files: |
             dist/*.whl
@@ -84,4 +86,4 @@ jobs:
 
       - name: Publish to PyPI
         if: github.event_name == 'release' || inputs.publish-to-pypi == 'true'
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@ba38be9e461d3875417946c167d0b5f3d385a247 # release/v1
