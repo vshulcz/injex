@@ -72,16 +72,23 @@ class Scope:
     def __init__(self, container: "Container"):
         self.container = container
         self._scoped_instances: dict[Any, Any] = {}
-        # Holds sync resources opened in this scope; finalized (LIFO) on exit.
-        self._stack = ExitStack()
+        # Created lazily so a scope that opens no resources (the common request
+        # scope) pays nothing for the ExitStack.
+        self._stack: ExitStack | None = None
 
     def __enter__(self) -> "Scope":
         return self
 
     def __exit__(self, exc_type: Any, exc: Any, traceback: Any) -> None:
         # Finalize sync resources (LIFO), then drop per-scope instances.
-        self._stack.close()
+        if self._stack is not None:
+            self._stack.close()
         self._scoped_instances.clear()
+
+    def _ensure_stack(self) -> ExitStack:
+        if self._stack is None:
+            self._stack = ExitStack()
+        return self._stack
 
     @overload
     def resolve(self, interface: type[T], name: str | None = None) -> T: ...
@@ -99,6 +106,14 @@ class Scope:
                 creator = container._prime_noscope_creator(interface)
             if creator is not None:
                 return creator(None)
+            # Graph needs a scope: run the compiled scope-aware creator with this
+            # scope (scoped instances cache in it) instead of the interpreted walk.
+            try:
+                scope_creator = container._scope_creators[interface]
+            except KeyError:
+                scope_creator = container._prime_scope_creator(interface)
+            if scope_creator is not None:
+                return scope_creator(self)
         return container._resolve_one(interface, self, name)
 
     @overload
@@ -119,13 +134,20 @@ class AsyncScope:
     def __init__(self, container: "Container"):
         self.container = container
         self._scoped_instances: dict[Any, Any] = {}
-        self._stack = AsyncExitStack()
+        # Created lazily: a scope that opens no async resources pays nothing.
+        self._stack: AsyncExitStack | None = None
 
     async def __aenter__(self) -> "AsyncScope":
         return self
 
     async def __aexit__(self, exc_type: Any, exc: Any, traceback: Any) -> None:
-        await self._stack.aclose()
+        if self._stack is not None:
+            await self._stack.aclose()
+
+    def _ensure_stack(self) -> AsyncExitStack:
+        if self._stack is None:
+            self._stack = AsyncExitStack()
+        return self._stack
 
     @overload
     async def aresolve(self, interface: type[T], name: str | None = None) -> T: ...
@@ -159,6 +181,7 @@ class Container:
         "_noscope_creators",
         "_registrations",
         "_resolving_local",
+        "_scope_creators",
         "_singleton_lock",
         "_singletons",
         "_sync_resource_keys",
@@ -192,6 +215,9 @@ class Container:
         # registration attribute reads. Value is None when the interface is not
         # eligible for the no-scope fast path. Cleared on every invalidation.
         self._noscope_creators: dict[Any, Callable[[Any], Any] | None] = {}
+        # Compiled scope-aware creators for graphs that need a scope (scoped
+        # services): scope.resolve() runs these instead of the interpreted walk.
+        self._scope_creators: dict[Any, Callable[[Any], Any] | None] = {}
         # Compiled async creators per (interface, name): an `async def` that
         # inlines the synchronous parts of the graph and awaits only genuine
         # async nodes, plus a flag for whether it needs an async scope.
@@ -228,6 +254,7 @@ class Container:
     def _invalidate_fast_creators(self) -> None:
         self._version += 1
         self._noscope_creators.clear()
+        self._scope_creators.clear()
         self._async_creators.clear()
 
     def register(
@@ -399,6 +426,23 @@ class Container:
                 if registration.lifestyle == LifeStyle.SINGLETON:
                     creator = _make_constant_creator(creator(None))
         self._noscope_creators[interface] = creator
+        return creator
+
+    def _prime_scope_creator(
+        self, interface: type | str
+    ) -> Callable[[Any], Any] | None:
+        """Compiled creator used by scope.resolve() for graphs that need a scope
+        (scoped services). It is the same flat/fast creator the container builds,
+        called with the live scope so scoped instances cache in it — replacing
+        the interpreted walk for the common request pattern."""
+        creator: Callable[[Any], Any] | None = None
+        registrations = self._registrations.get((interface, None))
+        if registrations:
+            registration = registrations[0]
+            if registration.fast_creator_version != self._version:
+                self._get_fast_creator(registration, (interface, None))
+            creator = registration.fast_creator
+        self._scope_creators[interface] = creator
         return creator
 
     def _resolve_slow(self, interface: type | str, name: str | None) -> Any:
@@ -1400,7 +1444,7 @@ class Container:
             cm = contextmanager(factory)(*args)
             if registration.lifestyle == LifeStyle.SINGLETON:
                 return self._get_sync_stack().enter_context(cm)
-            return scope._stack.enter_context(cm)
+            return scope._ensure_stack().enter_context(cm)
         return factory(*args)
 
     def _get_sync_stack(self) -> ExitStack:
@@ -1670,7 +1714,7 @@ class Container:
             for dependency_plan in plan.dependencies
         ]
         if registration.is_resource:
-            stack = self._get_async_stack() if singleton else scope._stack
+            stack = self._get_async_stack() if singleton else scope._ensure_stack()
             cm = asynccontextmanager(factory)(*args)
             return await stack.enter_async_context(cm)
         if registration.is_async:
