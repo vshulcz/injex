@@ -30,6 +30,9 @@ dependencies = []
 [project.optional-dependencies]
 fastapi = ["fastapi>=0.100"]
 
+[project.scripts]
+injex = "injex.cli:main"
+
 [tool.uv]
 # fastapi/httpx are intentionally NOT here: the type-check and FastAPI jobs add
 # them per-job (they pull pydantic-core, which has no wheel for Python 3.14 yet).
